@@ -72,15 +72,15 @@ const AppLayout = ({ children }) => {
               {user?.firstName?.[0] || 'U'}
             </div>
             <div className="user-info text-truncate">
-              <div className="small font-weight-bold" style={{ color: '#F8FAFC' }}>
+              <div className="small font-weight-bold text-dark">
                 {user?.firstName} {user?.lastName}
               </div>
-              <div className="xsmall text-white-50" style={{ fontSize: 11 }}>
+              <div className="xsmall text-muted" style={{ fontSize: 11 }}>
                 {getRoleName()}
               </div>
             </div>
           </div>
-          <button onClick={handleLogout} className="btn btn-link nav-item-link text-start w-100 p-0 m-0 border-0" style={{ color: '#fed7d7' }}>
+          <button onClick={handleLogout} className="btn btn-link nav-item-link text-start w-100 p-0 m-0 border-0 text-danger" style={{ fontSize: 13 }}>
             <FaSignOutAlt />
             <span>Sign Out</span>
           </button>
