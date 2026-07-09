@@ -84,7 +84,7 @@ const Login = () => {
           <div className="xsmall text-start bg-light p-2 rounded" style={{ fontSize: 11 }}>
             <strong>Admin:</strong> admin@dentalvision.com / Admin123!<br />
             <strong>Dentist:</strong> dentist1@dentalvision.com / Dentist123!<br />
-            <strong>Receptionist:</strong> receptionist1@dentalvision.com / Recept123!
+            <strong>Dental Staff:</strong> receptionist1@dentalvision.com / Recept123!
           </div>
         </div>
       </div>

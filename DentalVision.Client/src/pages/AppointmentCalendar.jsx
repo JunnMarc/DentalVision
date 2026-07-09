@@ -87,7 +87,7 @@ const AppointmentCalendar = () => {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h3 className="font-weight-bold m-0">Appointment Calendar</h3>
-        {hasRole(['Receptionist', 'Administrator']) && (
+        {hasRole(['Dental Staff', 'Administrator']) && (
           <button 
             className="btn btn-primary-clinic d-flex align-items-center gap-2"
             onClick={() => setShowModal(true)}

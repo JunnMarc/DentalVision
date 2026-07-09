@@ -242,10 +242,10 @@ const PlaqueValidation = () => {
         {/* Right Column: Calculations & Form Values */}
         <div className="col-md-5">
           {/* Coverage Summary */}
-          <div className="clinic-card text-center py-4 bg-light">
-            <h6 className="text-muted small mb-1">Calculated Plaque Coverage</h6>
-            <h1 className="display-4 font-weight-bold text-danger m-0">{coveragePercentage}%</h1>
-            <p className="text-muted small mt-2">Status: <strong>Pending Approval</strong></p>
+          <div className="clinic-card py-4 bg-light">
+            <h6 className="text-muted small mb-1 text-start">Calculated Plaque Coverage</h6>
+            <h1 className="display-4 font-weight-bold text-danger m-0 text-end">{coveragePercentage}%</h1>
+            <p className="text-muted small mt-2 text-start mb-0">Status: <strong>Pending Approval</strong></p>
           </div>
 
           {/* Tooth mapping list */}

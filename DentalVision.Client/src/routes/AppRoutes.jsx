@@ -42,7 +42,7 @@ const AppRoutes = () => {
       <Route 
         path="/dashboard" 
         element={
-          <PrivateRoute allowedRoles={['Administrator', 'Dentist', 'Receptionist']}>
+          <PrivateRoute allowedRoles={['Administrator', 'Dentist', 'Dental Staff']}>
             <Dashboard />
           </PrivateRoute>
         } 
@@ -50,7 +50,7 @@ const AppRoutes = () => {
       <Route 
         path="/patients" 
         element={
-          <PrivateRoute allowedRoles={['Administrator', 'Dentist', 'Receptionist']}>
+          <PrivateRoute allowedRoles={['Administrator', 'Dentist', 'Dental Staff']}>
             <PatientList />
           </PrivateRoute>
         } 
@@ -58,7 +58,7 @@ const AppRoutes = () => {
       <Route 
         path="/patients/:id" 
         element={
-          <PrivateRoute allowedRoles={['Administrator', 'Dentist', 'Receptionist']}>
+          <PrivateRoute allowedRoles={['Administrator', 'Dentist', 'Dental Staff']}>
             <PatientProfile />
           </PrivateRoute>
         } 
@@ -66,7 +66,7 @@ const AppRoutes = () => {
       <Route 
         path="/appointments" 
         element={
-          <PrivateRoute allowedRoles={['Administrator', 'Dentist', 'Receptionist']}>
+          <PrivateRoute allowedRoles={['Administrator', 'Dentist', 'Dental Staff']}>
             <AppointmentCalendar />
           </PrivateRoute>
         } 
@@ -74,7 +74,7 @@ const AppRoutes = () => {
       <Route 
         path="/billing" 
         element={
-          <PrivateRoute allowedRoles={['Administrator', 'Receptionist']}>
+          <PrivateRoute allowedRoles={['Administrator', 'Dental Staff']}>
             <Billing />
           </PrivateRoute>
         } 
@@ -82,7 +82,7 @@ const AppRoutes = () => {
       <Route 
         path="/plaque/upload" 
         element={
-          <PrivateRoute allowedRoles={['Dentist', 'Receptionist']}>
+          <PrivateRoute allowedRoles={['Dentist', 'Dental Staff']}>
             <UploadImage />
           </PrivateRoute>
         } 

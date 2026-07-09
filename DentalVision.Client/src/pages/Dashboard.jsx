@@ -45,7 +45,7 @@ const Dashboard = () => {
       try {
         let endpoint = '/dashboard/admin';
         if (hasRole(['Dentist'])) endpoint = '/dashboard/dentist';
-        if (hasRole(['Receptionist'])) endpoint = '/dashboard/receptionist';
+        if (hasRole(['Dental Staff'])) endpoint = '/dashboard/receptionist';
 
         const response = await api.get(endpoint);
         setData(response.data);
@@ -68,7 +68,7 @@ const Dashboard = () => {
       labels: data?.revenueTrend?.map(d => d.label) || [],
       datasets: [
         {
-          label: 'Monthly Revenue ($)',
+          label: 'Monthly Revenue (₱)',
           data: data?.revenueTrend?.map(d => d.value) || [],
           borderColor: '#2563EB',
           backgroundColor: 'rgba(37, 99, 235, 0.1)',
@@ -97,44 +97,44 @@ const Dashboard = () => {
         <div className="row g-4 mb-4">
           <div className="col-md-3">
             <div className="clinic-card stat-card d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="text-muted small mb-1">Total Patients</h6>
-                <h3 className="m-0 font-weight-bold">{data?.totalPatients}</h3>
+              <div className="w-100">
+                <h6 className="text-muted small mb-1 text-start">Total Patients</h6>
+                <h3 className="m-0 font-weight-bold text-end">{data?.totalPatients}</h3>
               </div>
-              <div className="stat-icon-wrapper text-primary bg-light">
+              <div className="stat-icon-wrapper text-primary bg-light ms-3">
                 <FaUserFriends />
               </div>
             </div>
           </div>
           <div className="col-md-3">
             <div className="clinic-card stat-card teal d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="text-muted small mb-1">Today's Appointments</h6>
-                <h3 className="m-0 font-weight-bold">{data?.todaysAppointments}</h3>
+              <div className="w-100">
+                <h6 className="text-muted small mb-1 text-start">Today's Appointments</h6>
+                <h3 className="m-0 font-weight-bold text-end">{data?.todaysAppointments}</h3>
               </div>
-              <div className="stat-icon-wrapper text-info bg-light" style={{ color: '#14B8A6' }}>
+              <div className="stat-icon-wrapper text-info bg-light ms-3" style={{ color: '#14B8A6' }}>
                 <FaCalendarCheck />
               </div>
             </div>
           </div>
           <div className="col-md-3">
             <div className="clinic-card stat-card green d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="text-muted small mb-1">Monthly Revenue</h6>
-                <h3 className="m-0 font-weight-bold">${data?.monthlyRevenue?.toLocaleString()}</h3>
+              <div className="w-100">
+                <h6 className="text-muted small mb-1 text-start">Monthly Revenue</h6>
+                <h3 className="m-0 font-weight-bold text-end">₱{data?.monthlyRevenue?.toLocaleString()}</h3>
               </div>
-              <div className="stat-icon-wrapper text-success bg-light">
-                <FaDollarSign />
+              <div className="stat-icon-wrapper text-success bg-light ms-3">
+                <span className="text-success font-weight-bold" style={{ fontSize: 18 }}>₱</span>
               </div>
             </div>
           </div>
           <div className="col-md-3">
             <div className="clinic-card stat-card red d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="text-muted small mb-1">Pending Analysing</h6>
-                <h3 className="m-0 font-weight-bold">{data?.pendingReportsCount}</h3>
+              <div className="w-100">
+                <h6 className="text-muted small mb-1 text-start">Pending Analysing</h6>
+                <h3 className="m-0 font-weight-bold text-end">{data?.pendingReportsCount}</h3>
               </div>
-              <div className="stat-icon-wrapper text-danger bg-light">
+              <div className="stat-icon-wrapper text-danger bg-light ms-3">
                 <FaClipboardList />
               </div>
             </div>
@@ -170,33 +170,33 @@ const Dashboard = () => {
         <div className="row g-4 mb-4">
           <div className="col-md-4">
             <div className="clinic-card stat-card d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="text-muted small mb-1">Today's Patients</h6>
-                <h3 className="m-0 font-weight-bold">{data?.todaysPatientsCount}</h3>
+              <div className="w-100">
+                <h6 className="text-muted small mb-1 text-start">Today's Patients</h6>
+                <h3 className="m-0 font-weight-bold text-end">{data?.todaysPatientsCount}</h3>
               </div>
-              <div className="stat-icon-wrapper text-primary bg-light">
+              <div className="stat-icon-wrapper text-primary bg-light ms-3">
                 <FaUserFriends />
               </div>
             </div>
           </div>
           <div className="col-md-4">
             <div className="clinic-card stat-card red d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="text-muted small mb-1">Pending Gumline Validation</h6>
-                <h3 className="m-0 font-weight-bold">{data?.pendingValidations?.length || 0}</h3>
+              <div className="w-100">
+                <h6 className="text-muted small mb-1 text-start">Pending Gumline Validation</h6>
+                <h3 className="m-0 font-weight-bold text-end">{data?.pendingValidations?.length || 0}</h3>
               </div>
-              <div className="stat-icon-wrapper text-danger bg-light">
+              <div className="stat-icon-wrapper text-danger bg-light ms-3">
                 <FaExclamationCircle />
               </div>
             </div>
           </div>
           <div className="col-md-4">
             <div className="clinic-card stat-card green d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="text-muted small mb-1">Recent Clinical Reports</h6>
-                <h3 className="m-0 font-weight-bold">{data?.recentReports?.length || 0}</h3>
+              <div className="w-100">
+                <h6 className="text-muted small mb-1 text-start">Recent Clinical Reports</h6>
+                <h3 className="m-0 font-weight-bold text-end">{data?.recentReports?.length || 0}</h3>
               </div>
-              <div className="stat-icon-wrapper text-success bg-light">
+              <div className="stat-icon-wrapper text-success bg-light ms-3">
                 <FaClipboardList />
               </div>
             </div>
@@ -283,44 +283,44 @@ const Dashboard = () => {
     );
   }
 
-  // --- RECEPTIONIST DASHBOARD VIEW ---
-  if (hasRole(['Receptionist'])) {
+  // --- DENTAL STAFF DASHBOARD VIEW ---
+  if (hasRole(['Dental Staff'])) {
     return (
       <div>
-        <h3 className="mb-4 font-weight-bold">Receptionist Dashboard</h3>
+        <h3 className="mb-4 font-weight-bold">Dental Staff Dashboard</h3>
 
         {/* Metric Cards */}
         <div className="row g-4 mb-4">
           <div className="col-md-4">
             <div className="clinic-card stat-card d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="text-muted small mb-1">Queue Today</h6>
-                <h3 className="m-0 font-weight-bold">{data?.activeQueueCount} Patients</h3>
+              <div className="w-100">
+                <h6 className="text-muted small mb-1 text-start">Queue Today</h6>
+                <h3 className="m-0 font-weight-bold text-end">{data?.activeQueueCount} Patients</h3>
               </div>
-              <div className="stat-icon-wrapper text-primary bg-light">
+              <div className="stat-icon-wrapper text-primary bg-light ms-3">
                 <FaCalendarCheck />
               </div>
             </div>
           </div>
           <div className="col-md-4">
             <div className="clinic-card stat-card red d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="text-muted small mb-1">Unpaid Invoices</h6>
-                <h3 className="m-0 font-weight-bold">{data?.totalUnpaidInvoices} Bills</h3>
+              <div className="w-100">
+                <h6 className="text-muted small mb-1 text-start">Unpaid Invoices</h6>
+                <h3 className="m-0 font-weight-bold text-end">{data?.totalUnpaidInvoices} Bills</h3>
               </div>
-              <div className="stat-icon-wrapper text-danger bg-light">
+              <div className="stat-icon-wrapper text-danger bg-light ms-3">
                 <FaClipboardList />
               </div>
             </div>
           </div>
           <div className="col-md-4">
             <div className="clinic-card stat-card green d-flex justify-content-between align-items-center">
-              <div>
-                <h6 className="text-muted small mb-1">Total Outstanding</h6>
-                <h3 className="m-0 font-weight-bold">${data?.unpaidBalanceSum?.toLocaleString()}</h3>
+              <div className="w-100">
+                <h6 className="text-muted small mb-1 text-start">Total Outstanding</h6>
+                <h3 className="m-0 font-weight-bold text-end">₱{data?.unpaidBalanceSum?.toLocaleString()}</h3>
               </div>
-              <div className="stat-icon-wrapper text-success bg-light">
-                <FaDollarSign />
+              <div className="stat-icon-wrapper text-success bg-light ms-3">
+                <span className="text-success font-weight-bold" style={{ fontSize: 18 }}>₱</span>
               </div>
             </div>
           </div>

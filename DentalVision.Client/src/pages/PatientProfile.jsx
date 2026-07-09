@@ -213,9 +213,9 @@ const PatientProfile = () => {
                     <tr>
                       <th>Invoice ID</th>
                       <th>Date</th>
-                      <th>Total</th>
-                      <th>Balance Due</th>
-                      <th>Status</th>
+                      <th className="text-end">Total</th>
+                      <th className="text-end">Balance Due</th>
+                      <th className="ps-4">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -223,9 +223,9 @@ const PatientProfile = () => {
                       <tr key={inv.id}>
                         <td className="font-weight-bold">#INV-00{inv.id}</td>
                         <td>{new Date(inv.invoiceDate).toLocaleDateString()}</td>
-                        <td>${inv.grandTotal?.toFixed(2)}</td>
-                        <td>${inv.balanceDue?.toFixed(2)}</td>
-                        <td>
+                        <td className="text-end">₱{inv.grandTotal?.toFixed(2)}</td>
+                        <td className="text-end">₱{inv.balanceDue?.toFixed(2)}</td>
+                        <td className="ps-4">
                           <span className={`badge ${
                             inv.paymentStatus === 'Paid' ? 'badge-paid' :
                             inv.paymentStatus === 'PartiallyPaid' ? 'badge-partial' : 'badge-unpaid'

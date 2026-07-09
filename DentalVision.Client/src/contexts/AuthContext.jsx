@@ -48,14 +48,17 @@ export const AuthProvider = ({ children }) => {
 
   const hasRole = (allowedRoles) => {
     if (!user) return false;
-    // user.role is returned as a number or string name. Enums are mapped as numbers, e.g., 1 for Admin, 2 for Dentist, 3 for Receptionist, 
-    // or as names, e.g. "Administrator", "Dentist", "Receptionist". Let's check both to be safe!
+    // Map enums or string names to role display names
     const roleMap = {
       1: "Administrator",
       2: "Dentist",
-      3: "Receptionist"
+      3: "Dental Staff",
+      "Administrator": "Administrator",
+      "Dentist": "Dentist",
+      "Receptionist": "Dental Staff",
+      "Dental Staff": "Dental Staff"
     };
-    const roleName = typeof user.role === 'number' ? roleMap[user.role] : user.role;
+    const roleName = roleMap[user.role] || user.role;
     return allowedRoles.includes(roleName);
   };
 

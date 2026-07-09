@@ -10,7 +10,7 @@ const Users = () => {
   const [error, setError] = useState('');
   
   const { register, handleSubmit, reset, watch } = useForm();
-  const watchedRole = watch("role", "3"); // default to Receptionist (3)
+  const watchedRole = watch("role", "3"); // default to Dental Staff (3)
 
   const fetchUsers = async () => {
     try {
@@ -168,7 +168,7 @@ const Users = () => {
                       <select className="form-select" {...register("role", { required: true })}>
                         <option value="1">Administrator</option>
                         <option value="2">Dentist</option>
-                        <option value="3">Receptionist</option>
+                        <option value="3">Dental Staff</option>
                       </select>
                     </div>
 
@@ -186,7 +186,7 @@ const Users = () => {
                       </>
                     )}
 
-                    {/* Receptionist specific fields */}
+                    {/* Dental Staff specific fields */}
                     {watchedRole === "3" && (
                       <div className="col-12">
                         <label className="form-label small font-weight-bold">Employee Code</label>

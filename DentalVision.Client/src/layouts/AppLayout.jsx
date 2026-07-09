@@ -26,16 +26,16 @@ const AppLayout = ({ children }) => {
 
   const getRoleName = () => {
     if (!user) return '';
-    const roleMap = { 1: "Administrator", 2: "Dentist", 3: "Receptionist" };
+    const roleMap = { 1: "Administrator", 2: "Dentist", 3: "Dental Staff" };
     return typeof user.role === 'number' ? roleMap[user.role] : user.role;
   };
 
   const menuItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: <FaThLarge />, roles: ['Administrator', 'Dentist', 'Receptionist'] },
-    { path: '/patients', label: 'Patients', icon: <FaUserFriends />, roles: ['Administrator', 'Dentist', 'Receptionist'] },
-    { path: '/appointments', label: 'Appointments', icon: <FaCalendarAlt />, roles: ['Administrator', 'Dentist', 'Receptionist'] },
-    { path: '/billing', label: 'Billing & Payments', icon: <FaFileInvoiceDollar />, roles: ['Administrator', 'Receptionist'] },
-    { path: '/plaque/upload', label: 'Dental Upload', icon: <FaCamera />, roles: ['Dentist', 'Receptionist'] },
+    { path: '/dashboard', label: 'Dashboard', icon: <FaThLarge />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
+    { path: '/patients', label: 'Patients', icon: <FaUserFriends />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
+    { path: '/appointments', label: 'Appointments', icon: <FaCalendarAlt />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
+    { path: '/billing', label: 'Billing & Payments', icon: <FaFileInvoiceDollar />, roles: ['Administrator', 'Dental Staff'] },
+    { path: '/plaque/upload', label: 'Dental Upload', icon: <FaCamera />, roles: ['Dentist', 'Dental Staff'] },
     { path: '/reports', label: 'Clinical Reports', icon: <FaFileAlt />, roles: ['Administrator', 'Dentist'] },
     { path: '/users', label: 'Staff Accounts', icon: <FaUserFriends />, roles: ['Administrator'] },
     { path: '/logs', label: 'Audit Logs', icon: <FaHistory />, roles: ['Administrator'] },

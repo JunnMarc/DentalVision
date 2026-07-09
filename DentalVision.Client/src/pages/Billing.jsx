@@ -125,7 +125,7 @@ const Billing = () => {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h3 className="font-weight-bold m-0">Invoices & Payments</h3>
-        {hasRole(['Receptionist', 'Administrator']) && (
+        {hasRole(['Dental Staff', 'Administrator']) && (
           <button 
             className="btn btn-primary-clinic d-flex align-items-center gap-2"
             onClick={() => setShowInvoiceModal(true)}
@@ -145,9 +145,9 @@ const Billing = () => {
                 <th>Invoice No</th>
                 <th>Patient</th>
                 <th>Invoice Date</th>
-                <th>Grand Total</th>
-                <th>Balance Due</th>
-                <th>Status</th>
+                <th className="text-end">Grand Total</th>
+                <th className="text-end">Balance Due</th>
+                <th className="ps-4">Status</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -157,9 +157,9 @@ const Billing = () => {
                   <td className="font-weight-bold">#INV-00{inv.id}</td>
                   <td>{inv.patientName}</td>
                   <td>{new Date(inv.invoiceDate).toLocaleDateString()}</td>
-                  <td>${inv.grandTotal?.toFixed(2)}</td>
-                  <td>${inv.balanceDue?.toFixed(2)}</td>
-                  <td>
+                  <td className="text-end">₱{inv.grandTotal?.toFixed(2)}</td>
+                  <td className="text-end">₱{inv.balanceDue?.toFixed(2)}</td>
+                  <td className="ps-4">
                     <span className={`badge ${
                       inv.paymentStatus === 'Paid' || inv.paymentStatus === 2 ? 'badge-paid' :
                       inv.paymentStatus === 'PartiallyPaid' || inv.paymentStatus === 1 ? 'badge-partial' : 'badge-unpaid'
@@ -168,7 +168,7 @@ const Billing = () => {
                     </span>
                   </td>
                   <td>
-                    {inv.balanceDue > 0 && hasRole(['Receptionist', 'Administrator']) && (
+                    {inv.balanceDue > 0 && hasRole(['Dental Staff', 'Administrator']) && (
                       <button 
                         onClick={() => {
                           setSelectedInvoice(inv);
@@ -227,7 +227,7 @@ const Billing = () => {
                         <input type="text" className="form-control" {...register(`items.${index}.description`, { required: true })} />
                       </div>
                       <div className="col-3">
-                        <label className="form-label small text-muted mb-1">Unit Price ($)</label>
+                        <label className="form-label small text-muted mb-1">Unit Price (₱)</label>
                         <input type="number" step="0.01" className="form-control" {...register(`items.${index}.unitPrice`, { required: true })} />
                       </div>
                       <div className="col-2">
@@ -244,20 +244,20 @@ const Billing = () => {
 
                   <div className="row g-3 border-top pt-3 mt-3">
                     <div className="col-6">
-                      <label className="form-label small font-weight-bold">Discount Amount ($)</label>
+                      <label className="form-label small font-weight-bold">Discount Amount (₱)</label>
                       <input type="number" step="0.01" className="form-control" {...register("discountAmount")} />
                     </div>
                     <div className="col-6">
-                      <label className="form-label small font-weight-bold">Tax Amount ($)</label>
+                      <label className="form-label small font-weight-bold">Tax Amount (₱)</label>
                       <input type="number" step="0.01" className="form-control" {...register("taxAmount")} />
                     </div>
                   </div>
 
                   <div className="mt-4 p-3 bg-light rounded text-end font-weight-bold">
-                    <div className="small text-muted mb-1">Subtotal: ${subtotal.toFixed(2)}</div>
-                    <div className="small text-muted mb-1">Discount: -${parseFloat(watchedDiscount).toFixed(2)}</div>
-                    <div className="small text-muted mb-2">Tax: +${parseFloat(watchedTax).toFixed(2)}</div>
-                    <h5 className="m-0 text-primary font-weight-bold">Grand Total: ${grandTotal.toFixed(2)}</h5>
+                    <div className="small text-muted mb-1">Subtotal: ₱{subtotal.toFixed(2)}</div>
+                    <div className="small text-muted mb-1">Discount: -₱{parseFloat(watchedDiscount).toFixed(2)}</div>
+                    <div className="small text-muted mb-2">Tax: +₱{parseFloat(watchedTax).toFixed(2)}</div>
+                    <h5 className="m-0 text-primary font-weight-bold">Grand Total: ₱{grandTotal.toFixed(2)}</h5>
                   </div>
                 </div>
                 <div className="modal-footer border-0 p-3 bg-light">
@@ -284,12 +284,12 @@ const Billing = () => {
                   <div className="p-3 bg-light rounded mb-3 small">
                     <div>Invoice: <strong>#INV-00{selectedInvoice.id}</strong></div>
                     <div>Patient: <strong>{selectedInvoice.patientName}</strong></div>
-                    <div>Grand Total: <strong>${selectedInvoice.grandTotal?.toFixed(2)}</strong></div>
-                    <div className="text-danger">Balance Due: <strong>${selectedInvoice.balanceDue?.toFixed(2)}</strong></div>
+                    <div>Grand Total: <strong>₱{selectedInvoice.grandTotal?.toFixed(2)}</strong></div>
+                    <div className="text-danger">Balance Due: <strong>₱{selectedInvoice.balanceDue?.toFixed(2)}</strong></div>
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label small font-weight-bold">Payment Amount ($)</label>
+                    <label className="form-label small font-weight-bold">Payment Amount (₱)</label>
                     <input 
                       type="number" 
                       step="0.01" 
