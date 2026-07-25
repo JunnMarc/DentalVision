@@ -35,6 +35,24 @@ namespace DentalVision.Infrastructure.Persistence
         {
             base.OnModelCreating(modelBuilder);
 
+            // Table mappings matching the ERD naming conventions exactly
+            modelBuilder.Entity<User>().ToTable("Users");
+            modelBuilder.Entity<Dentist>().ToTable("Users");
+            modelBuilder.Entity<Receptionist>().ToTable("Users");
+            modelBuilder.Entity<Patient>().ToTable("Patients");
+            modelBuilder.Entity<Appointment>().ToTable("Appointments");
+            modelBuilder.Entity<Invoice>().ToTable("Invoices");
+            modelBuilder.Entity<InvoiceItem>().ToTable("Invoice_items");
+            modelBuilder.Entity<Payment>().ToTable("Payments");
+            modelBuilder.Entity<ClinicSetting>().ToTable("Clinic_settings");
+            modelBuilder.Entity<ClinicalReport>().ToTable("Clinical_reports");
+            modelBuilder.Entity<PlaqueAnalysis>().ToTable("Plaque_analysis");
+            modelBuilder.Entity<PlaqueMapping>().ToTable("Plaque_mappings");
+            modelBuilder.Entity<DentalImage>().ToTable("Dental_images");
+            modelBuilder.Entity<AuditLog>().ToTable("Audit_logs");
+            modelBuilder.Entity<Notification>().ToTable("Notifications");
+            modelBuilder.Entity<ToothStatus>().ToTable("Tooth_statuses");
+
             // 1:1 relation User -> Dentist
             modelBuilder.Entity<Dentist>()
                 .HasKey(d => d.Id);

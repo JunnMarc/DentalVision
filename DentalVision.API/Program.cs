@@ -16,19 +16,12 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Configure Database (SQL Server with SQLite fallback for easy local prototype testing)
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-if (builder.Configuration.GetValue<bool>("UseSqlServer"))
-{
-    builder.Services.AddDbContext<DentalVisionDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-}
-else
-{
-    var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "DentalVision.db");
-    builder.Services.AddDbContext<DentalVisionDbContext>(options =>
-        options.UseSqlite($"Data Source={dbPath}"));
-}
+// 1. Configure Database (Microsoft SQL Server strictly)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+    ?? "Server=(localdb)\\mssqllocaldb;Database=dentalvision_prototype;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True;";
+
+builder.Services.AddDbContext<DentalVisionDbContext>(options =>
+    options.UseSqlServer(connectionString));
 
 // 2. Register HttpContextAccessor and AutoMapper
 builder.Services.AddHttpContextAccessor();

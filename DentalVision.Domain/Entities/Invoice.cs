@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using DentalVision.Domain.Enums;
 
 namespace DentalVision.Domain.Entities
@@ -9,6 +10,8 @@ namespace DentalVision.Domain.Entities
         public int Id { get; set; }
         public int PatientId { get; set; }
         public int? AppointmentId { get; set; }
+
+        [Column("InvoicedDate")]
         public DateTime InvoiceDate { get; set; } = DateTime.UtcNow;
         public decimal TotalAmount { get; set; }
         public decimal DiscountAmount { get; set; }
