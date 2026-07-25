@@ -124,6 +124,7 @@ namespace DentalVision.Infrastructure.Persistence
             {
                 var patient = new Patient
                 {
+                    PatientCode = $"PAT-00{i+1:D2}",
                     FirstName = firstNames[i],
                     LastName = lastNames[i],
                     DateOfBirth = DateTime.UtcNow.AddYears(-rand.Next(18, 65)).AddDays(-rand.Next(1, 365)),

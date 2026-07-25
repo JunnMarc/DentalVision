@@ -51,6 +51,7 @@ namespace DentalVision.Application.Services
         public async Task<PatientDto> CreateAsync(CreatePatientDto request)
         {
             var patient = _mapper.Map<Patient>(request);
+            patient.PatientCode = $"PAT-{Guid.NewGuid().ToString().Substring(0, 5).ToUpper()}";
             await _unitOfWork.Patients.AddAsync(patient);
             await _unitOfWork.CompleteAsync();
             return _mapper.Map<PatientDto>(patient);

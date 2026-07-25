@@ -5,6 +5,7 @@ namespace DentalVision.Application.DTOs
     public class PatientDto
     {
         public int Id { get; set; }
+        public string PatientCode { get; set; } = string.Empty;
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public DateTime DateOfBirth { get; set; }
