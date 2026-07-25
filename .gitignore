@@ -32,3 +32,7 @@ pnpm-debug.log*
 *.db
 *.db-shm
 *.db-wal
+
+# --- API Local Uploads & PDF Reports ---
+DentalVision.API/wwwroot/uploads/
+DentalVision.API/wwwroot/reports/

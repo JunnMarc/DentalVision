@@ -137,59 +137,7 @@ const UploadImage = () => {
             />
           </div>
 
-          {/* Preprocessing Options Sliders */}
-          {previewUrl && (
-            <div className="border rounded p-3 mb-4 bg-light shadow-sm">
-              <h6 className="font-weight-bold text-teal mb-3" style={{ color: '#0D9488' }}>Image Preprocessing Settings</h6>
-              
-              <div className="mb-3">
-                <div className="d-flex justify-content-between mb-1">
-                  <span className="small font-weight-bold text-secondary">Brightness Adjustment</span>
-                  <span className="small badge text-dark bg-light border">{brightness > 0 ? `+${brightness}` : brightness}</span>
-                </div>
-                <input 
-                  type="range" 
-                  className="form-range" 
-                  min="-100" 
-                  max="100" 
-                  value={brightness}
-                  onChange={(e) => setBrightness(parseInt(e.target.value))}
-                />
-              </div>
-
-              <div className="mb-3">
-                <div className="d-flex justify-content-between mb-1">
-                  <span className="small font-weight-bold text-secondary">Contrast Factor (α)</span>
-                  <span className="small badge text-dark bg-light border">{contrast.toFixed(1)}x</span>
-                </div>
-                <input 
-                  type="range" 
-                  className="form-range" 
-                  min="1.0" 
-                  max="3.0" 
-                  step="0.1"
-                  value={contrast}
-                  onChange={(e) => setContrast(parseFloat(e.target.value))}
-                />
-              </div>
-
-              <div className="mb-1">
-                <div className="d-flex justify-content-between mb-1">
-                  <span className="small font-weight-bold text-secondary">Noise Reduction Filter (Median)</span>
-                  <span className="small badge text-dark bg-light border">{denoise}px</span>
-                </div>
-                <input 
-                  type="range" 
-                  className="form-range" 
-                  min="1" 
-                  max="9" 
-                  step="2"
-                  value={denoise}
-                  onChange={(e) => setDenoise(parseInt(e.target.value))}
-                />
-              </div>
-            </div>
-          )}
+          {/* Preprocessing Options Sliders hidden to match document screenshots */}
 
           <div className="mb-4">
             <label className="form-label small font-weight-bold">Upload Notes / Remarks</label>

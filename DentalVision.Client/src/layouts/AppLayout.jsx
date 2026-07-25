@@ -46,10 +46,10 @@ const AppLayout = ({ children }) => {
     <div className="app-container">
       {/* Sidebar */}
       <aside className="sidebar">
-        <div className="sidebar-header d-flex align-items-center gap-2">
+        <Link to="/dashboard" className="sidebar-header d-flex align-items-center gap-2 text-decoration-none" style={{ cursor: 'pointer' }}>
           <FaClinicMedical size={24} className="text-teal" style={{ color: '#14B8A6' }} />
-          <h5 className="m-0 font-weight-bold tracking-tight">DentalVision</h5>
-        </div>
+          <h5 className="m-0 font-weight-bold tracking-tight text-white">DentalVision</h5>
+        </Link>
 
         <nav className="sidebar-nav">
           {menuItems
