@@ -19,6 +19,21 @@ const PlaqueValidation = () => {
   const canvasRef = useRef(null);
   const [markerNodes, setMarkerNodes] = useState([]); // List of custom nodes placed by dentist
 
+  const getUniqueMappings = () => {
+    const unique = {};
+    mappings.forEach(m => {
+      if (!unique[m.toothNumber]) {
+        unique[m.toothNumber] = { ...m };
+      } else {
+        const levelOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
+        if (levelOrder[m.plaqueLevel] > levelOrder[unique[m.toothNumber].plaqueLevel]) {
+          unique[m.toothNumber].plaqueLevel = m.plaqueLevel;
+        }
+      }
+    });
+    return Object.values(unique).sort((a, b) => a.toothNumber - b.toothNumber);
+  };
+
   useEffect(() => {
     const fetchAnalysisData = async () => {
       try {
@@ -64,29 +79,99 @@ const PlaqueValidation = () => {
     // Clear and redraw
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Draw connections (simulating gumline outlines)
-    ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    markerNodes.forEach((node, idx) => {
-      if (idx === 0) ctx.moveTo(node.x, node.y);
-      else ctx.lineTo(node.x, node.y);
+    // Draw each mapping contour individually (Clean Heatmap overlay style)
+    mappings.forEach(m => {
+      try {
+        const coords = JSON.parse(m.coordinatesJson);
+        if (Array.isArray(coords) && coords.length > 0) {
+          // Color code transparent mask based on plaque severity
+          ctx.fillStyle = m.plaqueLevel === 'High' 
+            ? 'rgba(239, 68, 68, 0.42)'  // Semi-transparent Red
+            : m.plaqueLevel === 'Medium' 
+              ? 'rgba(245, 158, 11, 0.42)' // Semi-transparent Orange/Yellow
+              : 'rgba(20, 184, 166, 0.38)'; // Semi-transparent Teal/Blue
+          
+          ctx.beginPath();
+          coords.forEach((pt, idx) => {
+            if (idx === 0) ctx.moveTo(pt.x, pt.y);
+            else ctx.lineTo(pt.x, pt.y);
+          });
+          if (coords.length > 2) {
+            ctx.closePath();
+          }
+          ctx.fill(); // Fill only, no outline stroke to remove mesh clutter
+        }
+      } catch (err) {}
     });
-    ctx.stroke();
 
-    // Draw coordinate dots (plaque hotspots)
-    markerNodes.forEach(node => {
-      ctx.fillStyle = '#EF4444'; // Red dot
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, 6, 0, 2 * Math.PI);
-      ctx.fill();
-      
-      // Node text label
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '10px sans-serif';
-      ctx.fillText(node.toothNumber.toString(), node.x - 5, node.y - 10);
+    // Group mappings by toothNumber to calculate one single centroid label per tooth
+    const centroidsByTooth = {};
+    mappings.forEach(m => {
+      try {
+        const coords = JSON.parse(m.coordinatesJson);
+        if (Array.isArray(coords) && coords.length > 0) {
+          const sumX = coords.reduce((sum, pt) => sum + pt.x, 0);
+          const sumY = coords.reduce((sum, pt) => sum + pt.y, 0);
+          const cx = sumX / coords.length;
+          const cy = sumY / coords.length;
+
+          if (!centroidsByTooth[m.toothNumber]) {
+            centroidsByTooth[m.toothNumber] = { x: 0, y: 0, count: 0 };
+          }
+          centroidsByTooth[m.toothNumber].x += cx;
+          centroidsByTooth[m.toothNumber].y += cy;
+          centroidsByTooth[m.toothNumber].count += 1;
+        }
+      } catch (err) {}
     });
-  }, [markerNodes]);
+
+    // Draw single clean FDI tooth label for each unique tooth
+    Object.entries(centroidsByTooth).forEach(([toothNum, data]) => {
+      const cx = data.x / data.count;
+      const cy = data.y / data.count;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 10px Inter, sans-serif';
+      ctx.shadowColor = '#000000';
+      ctx.shadowBlur = 3;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(toothNum, cx, cy);
+      
+      // Reset shadow & text styles
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+    });
+
+    // Draw manual clicked marker nodes that are not yet saved
+    markerNodes.forEach(node => {
+      const existsInMappings = mappings.some(m => {
+        try {
+          const coords = JSON.parse(m.coordinatesJson);
+          return coords.some(pt => pt.x === node.x && pt.y === node.y);
+        } catch (e) { return false; }
+      });
+
+      if (!existsInMappings) {
+        ctx.fillStyle = '#10B981'; // Green dot for manual additions
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, 6, 0, 2 * Math.PI);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9px sans-serif';
+        ctx.shadowColor = '#000000';
+        ctx.shadowBlur = 2;
+        ctx.fillText(node.toothNumber.toString(), node.x - 5, node.y - 10);
+        ctx.shadowBlur = 0;
+      }
+    });
+  }, [mappings, markerNodes]);
 
   const handleCanvasClick = (e) => {
     const canvas = canvasRef.current;
@@ -209,22 +294,43 @@ const PlaqueValidation = () => {
             </p>
 
             <div className="plaque-mapping-canvas-container" style={{ position: 'relative', width: '100%', height: '400px' }}>
-              {/* Backside Dental Image (Simulated color-disclosure view using styling gradient fallback if server upload is not active) */}
-              <div 
-                style={{ 
-                  width: '100%', 
-                  height: '100%', 
-                  backgroundImage: 'radial-gradient(circle, #e2e8f0 0%, #cbd5e1 100%)', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  fontSize: 14,
-                  fontWeight: 'bold',
-                  color: '#64748B'
-                }}
-              >
-                [ Dental Image Disclosed Canvas View ]
-              </div>
+              {/* Backside Dental Image (Render actual photo if loaded, fallback to gradient container if not) */}
+              {imagePath ? (
+                <img 
+                  src={imagePath} 
+                  alt="Dental Plaque"
+                  style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    objectFit: 'contain',
+                    borderRadius: '16px',
+                    backgroundColor: '#cbd5e1',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0
+                  }}
+                  onError={(e) => {
+                    // Fallback to text label representation if static load fails
+                    e.target.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div 
+                  style={{ 
+                    width: '100%', 
+                    height: '100%', 
+                    backgroundImage: 'radial-gradient(circle, #e2e8f0 0%, #cbd5e1 100%)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    color: '#64748B'
+                  }}
+                >
+                  [ Dental Image Disclosed Canvas View ]
+                </div>
+              )}
 
               {/* Overlay Interactive Drawing Canvas */}
               <canvas 
@@ -265,7 +371,7 @@ const PlaqueValidation = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {mappings.map(m => (
+                    {getUniqueMappings().map(m => (
                       <tr key={m.toothNumber}>
                         <td className="font-weight-bold">#{m.toothNumber}</td>
                         <td>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using DentalVision.Application.DTOs;
@@ -9,17 +10,49 @@ namespace DentalVision.Infrastructure.Services
 {
     public class ImageProcessingService : IImageProcessingService
     {
-        public async Task<PlaqueAnalysisResultDto> AnalyzeDentalImageAsync(string imagePath, int imageId)
+        public async Task<PlaqueAnalysisResultDto> AnalyzeDentalImageAsync(string imagePath, int imageId, int brightness = 0, decimal contrast = 1.0m, int denoise = 3)
         {
-            // Simulate processing delay (800ms)
+            // Resolve Python script path robustly
+            string currentDir = Directory.GetCurrentDirectory();
+            string scriptPath = Path.Combine(currentDir, "DentalVision.Infrastructure", "Scripts", "plaque_processor.py");
+            
+            if (!File.Exists(scriptPath))
+            {
+                // Sibling folder resolution (if running from API project folder)
+                scriptPath = Path.Combine(currentDir, "..", "DentalVision.Infrastructure", "Scripts", "plaque_processor.py");
+            }
+            if (!File.Exists(scriptPath))
+            {
+                scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Scripts", "plaque_processor.py");
+            }
+
+            if (File.Exists(scriptPath))
+            {
+                try
+                {
+                    var result = await RunPythonAnalysisAsync(scriptPath, imagePath, imageId, brightness, contrast, denoise);
+                    if (result != null)
+                    {
+                        return result;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ImageProcessingService] Python bridge exception: {ex.Message}. Falling back to C# mock simulation.");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[ImageProcessingService] Python script not found at '{scriptPath}'. Falling back to C# mock simulation.");
+            }
+
+            // --- GRACEFUL FALLBACK (Deterministic C# Mock Simulation) ---
             await Task.Delay(800);
 
-            // Seed deterministic or semi-random numbers based on imageId
             var random = new Random(imageId);
-            var coveragePercentage = Math.Round((decimal)(random.NextDouble() * 35.0 + 15.0), 2); // 15% to 50% plaque
-            var confidenceScore = Math.Round((decimal)(0.82 + random.NextDouble() * 0.15), 2);   // 82% to 97% confidence
+            var coveragePercentage = Math.Round((decimal)(random.NextDouble() * 35.0 + 15.0), 2);
+            var confidenceScore = Math.Round((decimal)(0.82 + random.NextDouble() * 0.15), 2);
 
-            // Simulate detection of red regions representing plaque
             var regionsList = new List<object>
             {
                 new { tooth = 11, x = 150, y = 250, width = 60, height = 40, intensity = "High" },
@@ -32,7 +65,6 @@ namespace DentalVision.Infrastructure.Services
 
             var detectedRegions = JsonSerializer.Serialize(regionsList);
 
-            // Generate dental plaque mapping coordinates for the visual canvas editor
             var mappings = new List<PlaqueMappingDto>
             {
                 new PlaqueMappingDto
@@ -87,6 +119,115 @@ namespace DentalVision.Infrastructure.Services
                 DetectedRegions = detectedRegions,
                 Mappings = mappings
             };
+        }
+
+        private async Task<PlaqueAnalysisResultDto?> RunPythonAnalysisAsync(string scriptPath, string imagePath, int imageId, int brightness, decimal contrast, int denoise)
+        {
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "python",
+                Arguments = $"\"{scriptPath}\" --image \"{imagePath}\" --brightness {brightness} --contrast {contrast} --denoise {denoise}",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using (var process = System.Diagnostics.Process.Start(startInfo))
+            {
+                if (process == null) return null;
+
+                string stdout = await process.StandardOutput.ReadToEndAsync();
+                string stderr = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                if (process.ExitCode != 0)
+                {
+                    Console.WriteLine($"[ImageProcessingService] Python bridge exit code: {process.ExitCode}. Stderr: {stderr}");
+                    return null;
+                }
+
+                try
+                {
+                    using (var doc = JsonDocument.Parse(stdout))
+                    {
+                        var root = doc.RootElement;
+                        var status = root.GetProperty("status").GetString();
+                        if (status == "error")
+                        {
+                            Console.WriteLine($"[ImageProcessingService] Script Error: {root.GetProperty("message").GetString()}");
+                            return null;
+                        }
+
+                        var coverage = root.GetProperty("coverage_percentage").GetDecimal();
+                        var confidence = root.GetProperty("confidence_score").GetDecimal();
+
+                        var mappingsList = new List<PlaqueMappingDto>();
+                        if (root.TryGetProperty("mappings", out var mappingsProp))
+                        {
+                            foreach (var mapEl in mappingsProp.EnumerateArray())
+                            {
+                                var tooth = mapEl.GetProperty("toothNumber").GetInt32();
+                                var level = mapEl.GetProperty("plaqueLevel").GetString() ?? "Low";
+                                var region = mapEl.GetProperty("gumlineRegion").GetString() ?? "Cervical";
+                                var coords = mapEl.GetProperty("coordinates");
+
+                                mappingsList.Add(new PlaqueMappingDto
+                                {
+                                    ToothNumber = tooth,
+                                    PlaqueLevel = level,
+                                    GumlineRegion = region,
+                                    CoordinatesJson = coords.ToString()
+                                });
+                            }
+                        }
+
+                        var regionsList = new List<object>();
+                        foreach (var map in mappingsList)
+                        {
+                            using (var pointsDoc = JsonDocument.Parse(map.CoordinatesJson))
+                            {
+                                int minX = 9999, minY = 9999, maxX = 0, maxY = 0;
+                                foreach (var pt in pointsDoc.RootElement.EnumerateArray())
+                                {
+                                    int x = pt.GetProperty("x").GetInt32();
+                                    int y = pt.GetProperty("y").GetInt32();
+                                    minX = Math.Min(minX, x);
+                                    minY = Math.Min(minY, y);
+                                    maxX = Math.Max(maxX, x);
+                                    maxY = Math.Max(maxY, y);
+                                }
+                                if (maxX > minX && maxY > minY)
+                                {
+                                    regionsList.Add(new
+                                    {
+                                        tooth = map.ToothNumber,
+                                        x = minX,
+                                        y = minY,
+                                        width = maxX - minX,
+                                        height = maxY - minY,
+                                        intensity = map.PlaqueLevel
+                                    });
+                                }
+                            }
+                        }
+
+                        return new PlaqueAnalysisResultDto
+                        {
+                            ImageId = imageId,
+                            CoveragePercentage = coverage,
+                            ConfidenceScore = confidence,
+                            DetectedRegions = JsonSerializer.Serialize(regionsList),
+                            Mappings = mappingsList
+                        };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ImageProcessingService] Parse exception: {ex.Message}");
+                    return null;
+                }
+            }
         }
     }
 }
