@@ -21,6 +21,7 @@ namespace DentalVision.Domain.Interfaces
         IRepository<AuditLog> AuditLogs { get; }
         IRepository<Notification> Notifications { get; }
         IRepository<ClinicSetting> ClinicSettings { get; }
+        IRepository<ToothStatus> ToothStatuses { get; }
         Task<int> CompleteAsync();
     }
 }

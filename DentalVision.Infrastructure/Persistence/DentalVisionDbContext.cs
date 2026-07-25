@@ -29,6 +29,7 @@ namespace DentalVision.Infrastructure.Persistence
         public DbSet<AuditLog> AuditLogs { get; set; } = null!;
         public DbSet<Notification> Notifications { get; set; } = null!;
         public DbSet<ClinicSetting> ClinicSettings { get; set; } = null!;
+        public DbSet<ToothStatus> ToothStatuses { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -107,6 +108,13 @@ namespace DentalVision.Infrastructure.Persistence
 
             modelBuilder.Entity<PlaqueAnalysis>().Property(pa => pa.CoveragePercentage).HasPrecision(5, 2);
             modelBuilder.Entity<PlaqueAnalysis>().Property(pa => pa.ConfidenceScore).HasPrecision(3, 2);
+
+            // Patient -> ToothStatus Cascade Delete relation
+            modelBuilder.Entity<ToothStatus>()
+                .HasOne(ts => ts.Patient)
+                .WithMany(p => p.ToothStatuses)
+                .HasForeignKey(ts => ts.PatientId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
 
         public override int SaveChanges()

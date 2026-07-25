@@ -27,6 +27,7 @@ namespace DentalVision.Infrastructure.Repositories
             AuditLogs = new Repository<AuditLog>(_context);
             Notifications = new Repository<Notification>(_context);
             ClinicSettings = new Repository<ClinicSetting>(_context);
+            ToothStatuses = new Repository<ToothStatus>(_context);
         }
 
         public IRepository<User> Users { get; }
@@ -44,6 +45,7 @@ namespace DentalVision.Infrastructure.Repositories
         public IRepository<AuditLog> AuditLogs { get; }
         public IRepository<Notification> Notifications { get; }
         public IRepository<ClinicSetting> ClinicSettings { get; }
+        public IRepository<ToothStatus> ToothStatuses { get; }
 
         public async Task<int> CompleteAsync()
         {

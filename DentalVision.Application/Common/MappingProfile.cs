@@ -42,6 +42,11 @@ namespace DentalVision.Application.Common
             CreateMap<PlaqueMapping, PlaqueMappingDto>();
             CreateMap<PlaqueMappingDto, PlaqueMapping>();
 
+            // Tooth status mapping
+            CreateMap<ToothStatus, ToothStatusDto>();
+            CreateMap<ToothStatusDto, ToothStatus>();
+            CreateMap<UpdateToothStatusDto, ToothStatus>();
+
             // Clinical Report mappings
             CreateMap<ClinicalReport, ClinicalReportDto>()
                 .ForMember(dest => dest.PatientName, opt => opt.MapFrom(src => src.Patient.FirstName + " " + src.Patient.LastName))

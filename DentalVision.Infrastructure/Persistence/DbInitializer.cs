@@ -345,6 +345,23 @@ namespace DentalVision.Infrastructure.Persistence
             };
             context.ClinicSettings.AddRange(settings);
             context.SaveChanges();
+
+            // Seed Patient Tooth Statuses
+            if (!context.ToothStatuses.Any())
+            {
+                var allPatients = context.Patients.ToList();
+                var toothStatuses = new List<ToothStatus>();
+                foreach (var patient in allPatients)
+                {
+                    toothStatuses.Add(new ToothStatus { PatientId = patient.Id, ToothNumber = 16, Status = "Caries", Notes = "Occlusal decay." });
+                    toothStatuses.Add(new ToothStatus { PatientId = patient.Id, ToothNumber = 24, Status = "Restored", Notes = "Amalgam restoration." });
+                    toothStatuses.Add(new ToothStatus { PatientId = patient.Id, ToothNumber = 38, Status = "Missing", Notes = "Congenitally missing." });
+                    toothStatuses.Add(new ToothStatus { PatientId = patient.Id, ToothNumber = 11, Status = "Healthy", Notes = "" });
+                    toothStatuses.Add(new ToothStatus { PatientId = patient.Id, ToothNumber = 21, Status = "Healthy", Notes = "" });
+                }
+                context.ToothStatuses.AddRange(toothStatuses);
+                context.SaveChanges();
+            }
         }
     }
 

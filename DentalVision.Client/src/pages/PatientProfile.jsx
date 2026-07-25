@@ -11,6 +11,7 @@ import {
   FaFilePdf
 } from 'react-icons/fa';
 import { Line } from 'react-chartjs-2';
+import OdontogramChart from '../components/OdontogramChart';
 
 const PatientProfile = () => {
   const { id } = useParams();
@@ -131,6 +132,13 @@ const PatientProfile = () => {
               Clinical Records & Analytics
             </button>
             <button 
+              className={`pb-2 px-1 font-weight-bold btn btn-link border-0 text-decoration-none ${activeTab === 'odontogram' ? 'text-teal border-bottom border-teal border-2 fw-bold' : 'text-muted'}`}
+              onClick={() => setActiveTab('odontogram')}
+              style={{ background: 'none', color: activeTab === 'odontogram' ? '#0D9488' : '#64748B', borderBottom: activeTab === 'odontogram' ? '2px solid #0D9488' : 'none', paddingBottom: '8px' }}
+            >
+              Interactive Odontogram Chart
+            </button>
+            <button 
               className={`pb-2 px-1 font-weight-bold btn btn-link border-0 text-decoration-none ${activeTab === 'comparison' ? 'text-teal border-bottom border-teal border-2 fw-bold' : 'text-muted'}`}
               onClick={() => setActiveTab('comparison')}
               style={{ background: 'none', color: activeTab === 'comparison' ? '#0D9488' : '#64748B', borderBottom: activeTab === 'comparison' ? '2px solid #0D9488' : 'none', paddingBottom: '8px' }}
@@ -139,7 +147,7 @@ const PatientProfile = () => {
             </button>
           </div>
 
-          {activeTab === 'records' ? (
+          {activeTab === 'records' && (
             <>
               {/* Plaque Trends Graph */}
               {reports.length > 0 && (
@@ -262,7 +270,13 @@ const PatientProfile = () => {
                 )}
               </div>
             </>
-          ) : (
+          )}
+
+          {activeTab === 'odontogram' && (
+            <OdontogramChart patientId={id} />
+          )}
+
+          {activeTab === 'comparison' && (
             <PlaqueComparisonView reports={reports} />
           )}
 
