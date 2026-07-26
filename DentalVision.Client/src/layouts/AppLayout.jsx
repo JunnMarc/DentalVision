@@ -11,7 +11,8 @@ import {
   FaFileAlt, 
   FaHistory, 
   FaCog, 
-  FaSignOutAlt 
+  FaSignOutAlt,
+  FaUser
 } from 'react-icons/fa';
 
 const AppLayout = ({ children }) => {
@@ -26,11 +27,12 @@ const AppLayout = ({ children }) => {
 
   const getRoleName = () => {
     if (!user) return '';
-    const roleMap = { 1: "Administrator", 2: "Dentist", 3: "Dental Staff" };
+    const roleMap = { 1: "Administrator", 2: "Dentist", 3: "Dental Staff", 4: "Patient" };
     return typeof user.role === 'number' ? roleMap[user.role] : user.role;
   };
 
   const menuItems = [
+    { path: '/my-profile', label: 'My Profile', icon: <FaUser />, roles: ['Patient'] },
     { path: '/dashboard', label: 'Dashboard', icon: <FaThLarge />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
     { path: '/patients', label: 'Patients', icon: <FaUserFriends />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
     { path: '/appointments', label: 'Appointments', icon: <FaCalendarAlt />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
@@ -46,7 +48,7 @@ const AppLayout = ({ children }) => {
     <div className="app-container">
       {/* Sidebar */}
       <aside className="sidebar">
-        <Link to="/dashboard" className="sidebar-header d-flex align-items-center gap-2 text-decoration-none" style={{ cursor: 'pointer' }}>
+        <Link to={user?.role === 4 || user?.role === 'Patient' ? "/my-profile" : "/dashboard"} className="sidebar-header d-flex align-items-center gap-2 text-decoration-none" style={{ cursor: 'pointer' }}>
           <FaClinicMedical size={24} className="text-teal" style={{ color: '#14B8A6' }} />
           <h5 className="m-0 font-weight-bold tracking-tight text-white">DentalVision</h5>
         </Link>

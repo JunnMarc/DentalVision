@@ -10,5 +10,7 @@ namespace DentalVision.Application.Interfaces
         Task<IEnumerable<PatientDto>> GetAllAsync(string? search = null);
         Task<PatientDto> CreateAsync(CreatePatientDto request);
         Task<PatientDto?> UpdateAsync(int id, CreatePatientDto request);
+        Task<PatientDto?> GetByEmailAsync(string email);
+        Task<PatientDto> CreateOrUpdateForEmailAsync(string email, CreatePatientDto request);
     }
 }

@@ -86,6 +86,29 @@ namespace DentalVision.Infrastructure.Persistence
                 receptionistUsers.Add(receptionistUser);
             }
 
+            // Demo Patient Users
+            var patientUser1 = new User
+            {
+                Email = "james.smith@gmail.com",
+                PasswordHash = PasswordHasher.HashPassword("Patient123!"),
+                FirstName = "James",
+                LastName = "Smith",
+                Role = UserRole.Patient,
+                IsActive = true
+            };
+            users.Add(patientUser1);
+
+            var newPatientUser = new User
+            {
+                Email = "newpatient@dentalvision.com",
+                PasswordHash = PasswordHasher.HashPassword("Patient123!"),
+                FirstName = "New",
+                LastName = "User",
+                Role = UserRole.Patient,
+                IsActive = true
+            };
+            users.Add(newPatientUser);
+
             context.Users.AddRange(users);
             context.SaveChanges();
 
@@ -171,15 +194,24 @@ namespace DentalVision.Infrastructure.Persistence
             context.Appointments.AddRange(appointments);
             context.SaveChanges();
 
-            // 5. Seed 50 Invoices & 50 Plaque Analyses (for completed appointments)
-            var completedAppointments = context.Appointments.Where(a => a.Status == AppointmentStatus.Completed).ToList();
-            var billingServices = new[] 
+            // 5. Seed Services Table
+            if (!context.Services.Any())
             {
-                new { Desc = "Dental Consultation", Price = 75.00m },
-                new { Desc = "Professional Scaling & Polishing", Price = 120.00m },
-                new { Desc = "Composite Filling", Price = 150.00m },
-                new { Desc = "Dental X-Ray", Price = 50.00m }
-            };
+                var services = new List<Service>
+                {
+                    new Service { ServiceName = "Dental Consultation", Price = 75.00m, Description = "Comprehensive dental assessment and consult." },
+                    new Service { ServiceName = "Professional Scaling & Polishing", Price = 120.00m, Description = "Complete prophylaxis and scale cleaning." },
+                    new Service { ServiceName = "Composite Filling", Price = 150.00m, Description = "Composite resin dental restoration for caries." },
+                    new Service { ServiceName = "Dental X-Ray", Price = 50.00m, Description = "Intraoral X-Ray imaging check." }
+                };
+                context.Services.AddRange(services);
+                context.SaveChanges();
+            }
+
+            var dbServices = context.Services.ToList();
+
+            // 6. Seed 50 Invoices & 50 Plaque Analyses (for completed appointments)
+            var completedAppointments = context.Appointments.Where(a => a.Status == AppointmentStatus.Completed).ToList();
 
             for (int i = 0; i < completedAppointments.Count; i++)
             {
@@ -196,24 +228,28 @@ namespace DentalVision.Infrastructure.Persistence
                     CreatedAt = appt.AppointmentDate.AddHours(1)
                 };
 
-                // Add 1 or 2 invoice items
+                // Add 1 or 2 invoice items with proper ServiceId references
+                var chosenService1 = dbServices[i % dbServices.Count];
                 var item1 = new InvoiceItem
                 {
-                    Description = billingServices[i % billingServices.Length].Desc,
-                    UnitPrice = billingServices[i % billingServices.Length].Price,
+                    ServiceId = chosenService1.Id,
+                    Description = chosenService1.ServiceName,
+                    UnitPrice = chosenService1.Price,
                     Quantity = 1,
-                    LineTotal = billingServices[i % billingServices.Length].Price
+                    LineTotal = chosenService1.Price
                 };
                 invoice.Items.Add(item1);
 
                 if (i % 2 == 0)
                 {
+                    var chosenService2 = dbServices[(i + 1) % dbServices.Count];
                     var item2 = new InvoiceItem
                     {
-                        Description = billingServices[(i + 1) % billingServices.Length].Desc,
-                        UnitPrice = billingServices[(i + 1) % billingServices.Length].Price,
+                        ServiceId = chosenService2.Id,
+                        Description = chosenService2.ServiceName,
+                        UnitPrice = chosenService2.Price,
                         Quantity = 1,
-                        LineTotal = billingServices[(i + 1) % billingServices.Length].Price
+                        LineTotal = chosenService2.Price
                     };
                     invoice.Items.Add(item2);
                 }
@@ -346,23 +382,6 @@ namespace DentalVision.Infrastructure.Persistence
             };
             context.ClinicSettings.AddRange(settings);
             context.SaveChanges();
-
-            // Seed Patient Tooth Statuses
-            if (!context.ToothStatuses.Any())
-            {
-                var allPatients = context.Patients.ToList();
-                var toothStatuses = new List<ToothStatus>();
-                foreach (var patient in allPatients)
-                {
-                    toothStatuses.Add(new ToothStatus { PatientId = patient.Id, ToothNumber = 16, Status = "Caries", Notes = "Occlusal decay." });
-                    toothStatuses.Add(new ToothStatus { PatientId = patient.Id, ToothNumber = 24, Status = "Restored", Notes = "Amalgam restoration." });
-                    toothStatuses.Add(new ToothStatus { PatientId = patient.Id, ToothNumber = 38, Status = "Missing", Notes = "Congenitally missing." });
-                    toothStatuses.Add(new ToothStatus { PatientId = patient.Id, ToothNumber = 11, Status = "Healthy", Notes = "" });
-                    toothStatuses.Add(new ToothStatus { PatientId = patient.Id, ToothNumber = 21, Status = "Healthy", Notes = "" });
-                }
-                context.ToothStatuses.AddRange(toothStatuses);
-                context.SaveChanges();
-            }
         }
     }
 

@@ -53,10 +53,12 @@ export const AuthProvider = ({ children }) => {
       1: "Administrator",
       2: "Dentist",
       3: "Dental Staff",
+      4: "Patient",
       "Administrator": "Administrator",
       "Dentist": "Dentist",
       "Receptionist": "Dental Staff",
-      "Dental Staff": "Dental Staff"
+      "Dental Staff": "Dental Staff",
+      "Patient": "Patient"
     };
     const roleName = roleMap[user.role] || user.role;
     return allowedRoles.includes(roleName);

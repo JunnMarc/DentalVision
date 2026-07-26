@@ -20,7 +20,12 @@ const Login = () => {
     setLoading(false);
 
     if (result.success) {
-      navigate('/dashboard');
+      const savedUser = JSON.parse(localStorage.getItem('user'));
+      if (savedUser && (savedUser.role === 4 || savedUser.role === 'Patient')) {
+        navigate('/my-profile');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
       setError(result.message);
     }

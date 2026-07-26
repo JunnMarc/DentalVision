@@ -68,5 +68,34 @@ namespace DentalVision.Application.Services
 
             return _mapper.Map<PatientDto>(patient);
         }
+
+        public async Task<PatientDto?> GetByEmailAsync(string email)
+        {
+            var patient = _unitOfWork.Patients.Find(p => p.Email != null && p.Email.ToLower() == email.ToLower()).FirstOrDefault();
+            return _mapper.Map<PatientDto?>(patient);
+        }
+
+        public async Task<PatientDto> CreateOrUpdateForEmailAsync(string email, CreatePatientDto request)
+        {
+            var patient = _unitOfWork.Patients.Find(p => p.Email != null && p.Email.ToLower() == email.ToLower()).FirstOrDefault();
+            if (patient != null)
+            {
+                // Update
+                _mapper.Map(request, patient);
+                patient.Email = email; // Lock email
+                _unitOfWork.Patients.Update(patient);
+            }
+            else
+            {
+                // Create
+                patient = _mapper.Map<Patient>(request);
+                patient.Email = email;
+                patient.PatientCode = $"PAT-{Guid.NewGuid().ToString().Substring(0, 5).ToUpper()}";
+                await _unitOfWork.Patients.AddAsync(patient);
+            }
+
+            await _unitOfWork.CompleteAsync();
+            return _mapper.Map<PatientDto>(patient);
+        }
     }
 }

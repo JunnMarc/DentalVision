@@ -24,6 +24,7 @@ namespace DentalVision.Application.DTOs
     public class InvoiceItemDto
     {
         public int Id { get; set; }
+        public int ServiceId { get; set; }
         public string Description { get; set; } = string.Empty;
         public decimal UnitPrice { get; set; }
         public int Quantity { get; set; }
@@ -41,9 +42,18 @@ namespace DentalVision.Application.DTOs
 
     public class CreateInvoiceItemDto
     {
+        public int ServiceId { get; set; }
         public string Description { get; set; } = string.Empty;
         public decimal UnitPrice { get; set; }
         public int Quantity { get; set; }
+    }
+
+    public class ServiceDto
+    {
+        public int Id { get; set; }
+        public string ServiceName { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public string? Description { get; set; }
     }
 
     public class PaymentDto

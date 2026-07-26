@@ -54,5 +54,33 @@ namespace DentalVision.API.Controllers
 
             return Ok(patient);
         }
+
+        [HttpGet("my-profile")]
+        public async Task<IActionResult> GetMyProfile()
+        {
+            var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
+                ?? User.FindFirst("email")?.Value;
+            
+            if (string.IsNullOrEmpty(email)) return BadRequest("User email claim not found in token");
+
+            var patient = await _patientService.GetByEmailAsync(email);
+            if (patient == null) return NotFound(new { message = "Patient profile not found for this user" });
+
+            return Ok(patient);
+        }
+
+        [HttpPost("my-profile")]
+        public async Task<IActionResult> CreateOrUpdateMyProfile([FromBody] CreatePatientDto request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
+                ?? User.FindFirst("email")?.Value;
+
+            if (string.IsNullOrEmpty(email)) return BadRequest("User email claim not found in token");
+
+            var patient = await _patientService.CreateOrUpdateForEmailAsync(email, request);
+            return Ok(patient);
+        }
     }
 }

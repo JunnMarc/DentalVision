@@ -16,6 +16,7 @@ import Settings from '../pages/Settings';
 import AuditLogs from '../pages/AuditLogs';
 import Users from '../pages/Users';
 import ReportDetails from '../pages/ReportDetails';
+import MyProfile from '../pages/MyProfile';
 
 // Route Guard for authenticated users
 const PrivateRoute = ({ children, allowedRoles }) => {
@@ -26,6 +27,9 @@ const PrivateRoute = ({ children, allowedRoles }) => {
   }
 
   if (allowedRoles && !hasRole(allowedRoles)) {
+    if (user.role === 4 || user.role === 'Patient') {
+      return <Navigate to="/my-profile" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -136,10 +140,31 @@ const AppRoutes = () => {
         } 
       />
 
+      <Route 
+        path="/my-profile" 
+        element={
+          <PrivateRoute allowedRoles={['Patient']}>
+            <MyProfile />
+          </PrivateRoute>
+        } 
+      />
+
       {/* Fallback redirection */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<FallbackRedirect />} />
     </Routes>
   );
+};
+
+// Dynamic fallback redirect component
+const FallbackRedirect = () => {
+  const { user } = useAuth();
+  
+  if (!user) return <Navigate to="/login" replace />;
+  
+  if (user.role === 4 || user.role === 'Patient') {
+    return <Navigate to="/my-profile" replace />;
+  }
+  return <Navigate to="/dashboard" replace />;
 };
 
 export default AppRoutes;

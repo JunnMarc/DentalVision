@@ -27,6 +27,5 @@ namespace DentalVision.Domain.Entities
         public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
         public virtual ICollection<DentalImage> DentalImages { get; set; } = new List<DentalImage>();
         public virtual ICollection<ClinicalReport> ClinicalReports { get; set; } = new List<ClinicalReport>();
-        public virtual ICollection<ToothStatus> ToothStatuses { get; set; } = new List<ToothStatus>();
     }
 }

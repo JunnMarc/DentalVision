@@ -47,6 +47,10 @@ namespace DentalVision.Application.Common
             CreateMap<ToothStatusDto, ToothStatus>();
             CreateMap<UpdateToothStatusDto, ToothStatus>();
 
+            // Service mapping
+            CreateMap<Service, ServiceDto>();
+            CreateMap<ServiceDto, Service>();
+
             // Clinical Report mappings
             CreateMap<ClinicalReport, ClinicalReportDto>()
                 .ForMember(dest => dest.PatientName, opt => opt.MapFrom(src => src.Patient.FirstName + " " + src.Patient.LastName))

@@ -29,7 +29,7 @@ namespace DentalVision.Infrastructure.Persistence
         public DbSet<AuditLog> AuditLogs { get; set; } = null!;
         public DbSet<Notification> Notifications { get; set; } = null!;
         public DbSet<ClinicSetting> ClinicSettings { get; set; } = null!;
-        public DbSet<ToothStatus> ToothStatuses { get; set; } = null!;
+        public DbSet<Service> Services { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -51,7 +51,14 @@ namespace DentalVision.Infrastructure.Persistence
             modelBuilder.Entity<DentalImage>().ToTable("Dental_images");
             modelBuilder.Entity<AuditLog>().ToTable("Audit_logs");
             modelBuilder.Entity<Notification>().ToTable("Notifications");
-            modelBuilder.Entity<ToothStatus>().ToTable("Tooth_statuses");
+            modelBuilder.Entity<Service>().ToTable("Services");
+
+            // InvoiceItem -> Service relationship
+            modelBuilder.Entity<InvoiceItem>()
+                .HasOne(ii => ii.Service)
+                .WithMany(s => s.InvoiceItems)
+                .HasForeignKey(ii => ii.ServiceId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // 1:1 relation User -> Dentist
             modelBuilder.Entity<Dentist>()
@@ -127,12 +134,8 @@ namespace DentalVision.Infrastructure.Persistence
             modelBuilder.Entity<PlaqueAnalysis>().Property(pa => pa.CoveragePercentage).HasPrecision(5, 2);
             modelBuilder.Entity<PlaqueAnalysis>().Property(pa => pa.ConfidenceScore).HasPrecision(3, 2);
 
-            // Patient -> ToothStatus Cascade Delete relation
-            modelBuilder.Entity<ToothStatus>()
-                .HasOne(ts => ts.Patient)
-                .WithMany(p => p.ToothStatuses)
-                .HasForeignKey(ts => ts.PatientId)
-                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<Service>().Property(s => s.Price).HasPrecision(18, 2);
+
         }
 
         public override int SaveChanges()
