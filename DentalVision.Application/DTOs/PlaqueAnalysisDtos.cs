@@ -26,6 +26,7 @@ namespace DentalVision.Application.DTOs
         public int? ApprovedByDentistId { get; set; }
         public string? ApprovedByDentistName { get; set; }
         public DateTime? ApprovedAt { get; set; }
+        public string EngineUsed { get; set; } = "Unknown";
         public List<PlaqueMappingDto> Mappings { get; set; } = new List<PlaqueMappingDto>();
     }
 
@@ -44,6 +45,7 @@ namespace DentalVision.Application.DTOs
         public decimal CoveragePercentage { get; set; }
         public decimal ConfidenceScore { get; set; }
         public string DetectedRegions { get; set; } = string.Empty;
+        public string EngineUsed { get; set; } = "Unknown";
         public List<PlaqueMappingDto> Mappings { get; set; } = new List<PlaqueMappingDto>();
     }
 

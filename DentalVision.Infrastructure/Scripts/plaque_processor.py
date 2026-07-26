@@ -78,7 +78,131 @@ def analyze_plaque(image_path, brightness=0, contrast=1.0, denoise_radius=3):
     if not os.path.exists(weights_path):
         weights_path = os.path.join(script_dir, "weights", "yolov8n-dental-seg.pt")
 
-    # 5. Dual-Mode Segmentation Pipeline (ML with CV Fallback)
+    # 5. Segmentation Pipeline (Roboflow Cloud -> YOLO Edge -> OpenCV Fallback)
+    api_key = os.environ.get("ROBOFLOW_API_KEY", "yQHvjs9GBBuMd1jodvqI")
+    if api_key:
+        try:
+            import urllib.request
+            import urllib.error
+            
+            url = f"https://serverless.roboflow.com/teeth-hpjzi/1?api_key={api_key}"
+            with open(image_path, "rb") as f:
+                img_data = f.read()
+                
+            req = urllib.request.Request(
+                url, 
+                data=img_data, 
+                headers={"Content-Type": "application/octet-stream"}
+            )
+            
+            with urllib.request.urlopen(req, timeout=15) as response:
+                res_body = response.read().decode("utf-8")
+                res_json = json.loads(res_body)
+                
+            predictions = res_json.get("predictions", [])
+            if len(predictions) > 0:
+                mappings = []
+                total_teeth_pixels = 0
+                total_plaque_pixels = 0
+                
+                for idx, pred in enumerate(predictions):
+                    conf = float(pred.get("confidence", 0.90))
+                    cx = float(pred.get("x", w / 2))
+                    cy = float(pred.get("y", h / 2))
+                    
+                    # Resolve FDI Label spatially
+                    x_ratio = cx / w
+                    y_ratio = cy / h
+                    
+                    if y_ratio < 0.58:
+                        if x_ratio < 0.5:
+                            tooth_num = 18 - int(x_ratio * 2 * 7.9)
+                        else:
+                            tooth_num = 21 + int((x_ratio - 0.5) * 2 * 7.9)
+                    else:
+                        if x_ratio < 0.5:
+                            tooth_num = 48 - int(x_ratio * 2 * 7.9)
+                        else:
+                            tooth_num = 31 + int((x_ratio - 0.5) * 2 * 7.9)
+                            
+                    if y_ratio < 0.58:
+                        tooth_num = max(11, min(28, tooth_num))
+                    else:
+                        tooth_num = max(31, min(48, tooth_num))
+                        
+                    # Extract polygon points and fill mask
+                    pts_list = pred.get("points", [])
+                    if len(pts_list) < 3:
+                        continue
+                        
+                    poly_pts = []
+                    for pt in pts_list:
+                        poly_pts.append([int(pt["x"]), int(pt["y"])])
+                    poly_pts = np.array(poly_pts, dtype=np.int32)
+                    
+                    single_tooth_mask = np.zeros(processed.shape[:2], dtype=np.uint8)
+                    cv2.fillPoly(single_tooth_mask, [poly_pts], 255)
+                    
+                    # Calculate plaque pixels strictly inside this tooth boundary
+                    tooth_plaque = cv2.bitwise_and(plaque_mask, single_tooth_mask)
+                    
+                    tooth_area = cv2.countNonZero(single_tooth_mask)
+                    plaque_area = cv2.countNonZero(tooth_plaque)
+                    
+                    total_teeth_pixels += tooth_area
+                    total_plaque_pixels += plaque_area
+                    
+                    # Find plaque contours on this specific tooth crown
+                    contours, _ = cv2.findContours(tooth_plaque, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    for cnt in contours:
+                        area = cv2.contourArea(cnt)
+                        if area < 30:
+                            continue
+                            
+                        epsilon = 0.015 * cv2.arcLength(cnt, True)
+                        approx = cv2.approxPolyDP(cnt, epsilon, True)
+                        
+                        coords = []
+                        for pt in approx:
+                            pt_x, pt_y = pt[0]
+                            coords.append({
+                                "x": int((pt_x / w) * 600),
+                                "y": int((pt_y / h) * 400)
+                            })
+                            
+                        plaque_ratio = (plaque_area / max(1, tooth_area)) * 100
+                        plaque_level = "Low"
+                        if plaque_ratio > 30:
+                            plaque_level = "High"
+                        elif plaque_ratio > 10:
+                            plaque_level = "Medium"
+                            
+                        M = cv2.moments(cnt)
+                        cy_mom = int(M["m01"] / M["m00"]) if M["m00"] > 0 else int(approx[0][0][1])
+                        region = "Cervical" if cy_mom > (h * 0.4) else "Margin"
+                        
+                        mappings.append({
+                            "toothNumber": tooth_num,
+                            "plaqueLevel": plaque_level,
+                            "gumlineRegion": region,
+                            "coordinates": coords
+                        })
+                        
+                coverage_percent = round((total_plaque_pixels / max(1, total_teeth_pixels)) * 100, 1)
+                confidences = [float(p.get("confidence", 0.90)) for p in predictions]
+                avg_confidence = round(float(np.mean(confidences)), 2) if len(confidences) > 0 else 0.90
+                
+                return {
+                    "status": "success",
+                    "engine": "Roboflow Serverless API",
+                    "coverage_percentage": coverage_percent,
+                    "confidence_score": avg_confidence,
+                    "mappings": mappings
+                }
+        except Exception as rf_err:
+            print(f"[plaque_processor] Roboflow API error: {rf_err}. Falling back to standard mode.", file=sys.stderr)
+            pass
+
     if HAS_YOLO and os.path.exists(weights_path):
         try:
             # Stage 1: Tooth Instance Segmentation using YOLOv8-seg model
@@ -168,6 +292,7 @@ def analyze_plaque(image_path, brightness=0, contrast=1.0, denoise_radius=3):
                 
                 return {
                     "status": "success",
+                    "engine": "YOLOv8-seg (Local Edge)",
                     "coverage_percentage": coverage_percent,
                     "confidence_score": avg_confidence,
                     "mappings": mappings
@@ -281,6 +406,7 @@ def analyze_plaque(image_path, brightness=0, contrast=1.0, denoise_radius=3):
 
     return {
         "status": "success",
+        "engine": "OpenCV (HSV Fallback)",
         "coverage_percentage": coverage_percent,
         "confidence_score": avg_confidence,
         "mappings": mappings

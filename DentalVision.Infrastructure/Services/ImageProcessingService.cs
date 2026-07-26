@@ -10,6 +10,13 @@ namespace DentalVision.Infrastructure.Services
 {
     public class ImageProcessingService : IImageProcessingService
     {
+        private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration;
+
+        public ImageProcessingService(Microsoft.Extensions.Configuration.IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
         public async Task<PlaqueAnalysisResultDto> AnalyzeDentalImageAsync(string imagePath, int imageId, int brightness = 0, decimal contrast = 1.0m, int denoise = 3)
         {
             // Resolve Python script path robustly
@@ -117,6 +124,7 @@ namespace DentalVision.Infrastructure.Services
                 CoveragePercentage = coveragePercentage,
                 ConfidenceScore = confidenceScore,
                 DetectedRegions = detectedRegions,
+                EngineUsed = "OpenCV (HSV Fallback - Mock)",
                 Mappings = mappings
             };
         }
@@ -132,6 +140,12 @@ namespace DentalVision.Infrastructure.Services
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
+
+            var apiKey = _configuration["RoboflowApiKey"] ?? Environment.GetEnvironmentVariable("ROBOFLOW_API_KEY");
+            if (!string.IsNullOrEmpty(apiKey))
+            {
+                startInfo.EnvironmentVariables["ROBOFLOW_API_KEY"] = apiKey;
+            }
 
             using (var process = System.Diagnostics.Process.Start(startInfo))
             {
@@ -212,12 +226,15 @@ namespace DentalVision.Infrastructure.Services
                             }
                         }
 
+                        var engine = root.TryGetProperty("engine", out var engProp) ? engProp.GetString() ?? "Unknown" : "Unknown";
+
                         return new PlaqueAnalysisResultDto
                         {
                             ImageId = imageId,
                             CoveragePercentage = coverage,
                             ConfidenceScore = confidence,
                             DetectedRegions = JsonSerializer.Serialize(regionsList),
+                            EngineUsed = engine,
                             Mappings = mappingsList
                         };
                     }

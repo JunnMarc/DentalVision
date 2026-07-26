@@ -95,6 +95,7 @@ namespace DentalVision.API.Controllers
                 ConfidenceScore = analysisResult.ConfidenceScore,
                 Status = AnalysisStatus.PendingValidation,
                 DetectedRegions = analysisResult.DetectedRegions,
+                OverlayImagePath = analysisResult.EngineUsed,
                 CreatedAt = DateTime.UtcNow
             };
 

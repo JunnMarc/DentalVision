@@ -38,7 +38,8 @@ namespace DentalVision.Application.Common
             CreateMap<DentalImage, DentalImageDto>();
             CreateMap<PlaqueAnalysis, PlaqueAnalysisDto>()
                 .ForMember(dest => dest.ApprovedByDentistName, opt => opt.MapFrom(src => src.ApprovedByDentist != null ? src.ApprovedByDentist.User.FirstName + " " + src.ApprovedByDentist.User.LastName : string.Empty))
-                .ForMember(dest => dest.Mappings, opt => opt.MapFrom(src => src.PlaqueMappings));
+                .ForMember(dest => dest.Mappings, opt => opt.MapFrom(src => src.PlaqueMappings))
+                .ForMember(dest => dest.EngineUsed, opt => opt.MapFrom(src => src.OverlayImagePath ?? "OpenCV (HSV Fallback)"));
             CreateMap<PlaqueMapping, PlaqueMappingDto>();
             CreateMap<PlaqueMappingDto, PlaqueMapping>();
 

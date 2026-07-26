@@ -294,7 +294,7 @@ const MyProfile = () => {
                 <FaUser size={30} />
               </div>
               <div className="ms-3">
-                <h5 className="mb-0 font-weight-bold">{profile.firstName} {profile.lastName}</h5>
+                <h5 className="mb-0 font-weight-bold text-white">{profile.firstName} {profile.lastName}</h5>
                 <span className="badge bg-light text-dark font-weight-bold xsmall mt-1 px-2 py-1">
                   ID: {profile.patientCode}
                 </span>

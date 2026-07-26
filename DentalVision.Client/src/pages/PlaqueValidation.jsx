@@ -270,7 +270,23 @@ const PlaqueValidation = () => {
 
   return (
     <div>
-      <h3 className="mb-4 font-weight-bold">Dentist Validation Panel</h3>
+      <div className="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+        <h3 className="font-weight-bold m-0">Dentist Validation Panel</h3>
+        {analysis && (
+          <div className="d-flex align-items-center gap-2 bg-light border rounded px-3 py-1 shadow-sm">
+            <span className="small text-muted font-weight-bold">Status:</span>
+            <span className="badge bg-success text-white">Active</span>
+            <div className="vr mx-1" style={{ height: '15px' }}></div>
+            <span className="small text-muted font-weight-bold">Segmenter:</span>
+            <span className={`badge ${
+              analysis.engineUsed?.includes("Roboflow") ? "bg-info text-dark" :
+              analysis.engineUsed?.includes("YOLO") ? "bg-primary text-white" : "bg-secondary text-white"
+            } px-2 py-1 font-weight-bold`} style={{ fontSize: '0.8rem' }}>
+              {analysis.engineUsed || "OpenCV (HSV Fallback)"}
+            </span>
+          </div>
+        )}
+      </div>
 
       {error && (
         <div className="alert alert-danger py-2 small" role="alert">
