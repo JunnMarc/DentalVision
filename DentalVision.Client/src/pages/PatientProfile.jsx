@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   FaUser, 
   FaFolderOpen, 
@@ -15,12 +16,31 @@ import OdontogramChart from '../components/OdontogramChart';
 
 const PatientProfile = () => {
   const { id } = useParams();
+  const { hasRole } = useAuth();
   const [patient, setPatient] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [reports, setReports] = useState([]);
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('records');
+  const [exportingId, setExportingId] = useState(null);
+
+  const handleExportPDF = async (reportId) => {
+    try {
+      setExportingId(reportId);
+      const response = await api.get(`/reports/${reportId}/export`, {
+        responseType: 'blob'
+      });
+      const file = new Blob([response.data], { type: 'application/pdf' });
+      const fileURL = URL.createObjectURL(file);
+      window.open(fileURL, '_blank');
+    } catch (err) {
+      console.error("Failed to export clinical report PDF:", err);
+      alert("Failed to export PDF clinical report. Please verify permissions.");
+    } finally {
+      setExportingId(null);
+    }
+  };
 
   useEffect(() => {
     const fetchPatientData = async () => {
@@ -85,9 +105,11 @@ const PatientProfile = () => {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h3 className="font-weight-bold m-0">Patient Profile</h3>
-        <Link to={`/plaque/upload?patientId=${id}`} className="btn btn-primary-clinic d-flex align-items-center gap-2">
-          <FaCamera /> Upload Dental Image
-        </Link>
+        {hasRole(['Dentist']) && (
+          <Link to={`/plaque/upload?patientId=${id}`} className="btn btn-primary-clinic d-flex align-items-center gap-2">
+            <FaCamera /> Upload Dental Image
+          </Link>
+        )}
       </div>
 
       <div className="row g-4">
@@ -174,9 +196,11 @@ const PatientProfile = () => {
                           </div>
                           <div className="small font-weight-bold mb-1">Plaque Detected</div>
                           <div className="xsmall text-muted mb-2">{new Date(img.uploadedAt).toLocaleDateString()}</div>
-                          <Link to={`/plaque/validate/${img.id}`} className="btn btn-xs btn-outline-primary w-100 py-1" style={{ fontSize: 11 }}>
-                            View Mapping
-                          </Link>
+                          {hasRole(['Dentist']) && (
+                            <Link to={`/plaque/validate/${img.id}`} className="btn btn-xs btn-outline-primary w-100 py-1" style={{ fontSize: 11 }}>
+                              Map & Validate
+                            </Link>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -212,16 +236,15 @@ const PatientProfile = () => {
                                 {r.approvalStatus}
                               </span>
                             </td>
-                            <td>
-                              <a 
-                                href={`http://localhost:5098/api/reports/${r.id}/export`} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="btn btn-sm btn-outline-danger"
-                              >
-                                <FaFilePdf /> PDF
-                              </a>
-                            </td>
+                             <td>
+                               <button 
+                                 onClick={() => handleExportPDF(r.id)} 
+                                 className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                                 disabled={exportingId === r.id}
+                               >
+                                 <FaFilePdf /> {exportingId === r.id ? 'Loading...' : 'PDF'}
+                               </button>
+                             </td>
                           </tr>
                         ))}
                       </tbody>
@@ -256,10 +279,10 @@ const PatientProfile = () => {
                             <td className="text-end">₱{inv.balanceDue?.toFixed(2)}</td>
                             <td className="ps-4">
                               <span className={`badge ${
-                                inv.paymentStatus === 'Paid' ? 'badge-paid' :
-                                inv.paymentStatus === 'PartiallyPaid' ? 'badge-partial' : 'badge-unpaid'
+                                inv.paymentStatus === 'Paid' || inv.paymentStatus === 2 ? 'badge-paid' :
+                                inv.paymentStatus === 'PartiallyPaid' || inv.paymentStatus === 1 ? 'badge-partial' : 'badge-unpaid'
                               }`}>
-                                {inv.paymentStatus}
+                                {inv.paymentStatus === 0 ? 'Unpaid' : inv.paymentStatus === 1 ? 'PartiallyPaid' : inv.paymentStatus === 2 ? 'Paid' : inv.paymentStatus}
                               </span>
                             </td>
                           </tr>

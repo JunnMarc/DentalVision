@@ -12,6 +12,9 @@ const PlaqueValidation = () => {
   const [coveragePercentage, setCoveragePercentage] = useState(0);
   const [dentistNotes, setDentistNotes] = useState('');
   const [recommendations, setRecommendations] = useState('');
+  const [severityAdjustment, setSeverityAdjustment] = useState('none');
+  const [customPrice, setCustomPrice] = useState('');
+  const [specialTools, setSpecialTools] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -363,6 +366,30 @@ const PlaqueValidation = () => {
       } catch (e) {}
     });
 
+    let finalRecommendations = recommendations;
+    if (severityAdjustment !== 'none' || specialTools.trim()) {
+      let amount = 0;
+      let reason = '';
+      if (severityAdjustment === 'moderate') {
+        amount = 1000;
+        reason = 'Deep Scaling for Moderate Plaque';
+      } else if (severityAdjustment === 'severe') {
+        amount = 2000;
+        reason = 'Ultrasonic Scaling for Severe Plaque';
+      } else if (severityAdjustment === 'custom') {
+        amount = parseFloat(customPrice) || 0;
+        reason = 'Custom Clinical Pricing';
+      } else {
+        reason = 'Fixed Rate';
+      }
+      
+      if (specialTools.trim()) {
+        reason += ` - Tools: ${specialTools.trim()}`;
+      }
+      
+      finalRecommendations += `\n\n[BillingRecommendation: ${amount} | Reason: ${reason}]`;
+    }
+
     const payload = {
       approvedPercentage: parseFloat(coveragePercentage),
       approvedRegions: JSON.stringify(activeNodes),
@@ -373,7 +400,7 @@ const PlaqueValidation = () => {
         coordinatesJson: m.coordinatesJson
       })),
       dentistNotes,
-      recommendations
+      recommendations: finalRecommendations
     };
 
     try {
@@ -391,7 +418,7 @@ const PlaqueValidation = () => {
     <div>
       <div className="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
         <h3 className="font-weight-bold m-0">Dentist Validation Panel</h3>
-        {analysis && (
+        {/* {analysis && (
           <div className="d-flex align-items-center gap-2 bg-light border rounded px-3 py-1 shadow-sm">
             <span className="small text-muted font-weight-bold">Status:</span>
             <span className="badge bg-success text-white">Active</span>
@@ -404,7 +431,7 @@ const PlaqueValidation = () => {
               {analysis.engineUsed || "OpenCV (HSV Fallback)"}
             </span>
           </div>
-        )}
+        )} */}
       </div>
 
       {error && (
@@ -684,6 +711,51 @@ const PlaqueValidation = () => {
                 value={recommendations}
                 onChange={(e) => setRecommendations(e.target.value)}
               />
+            </div>
+
+            <div className="mb-4 p-3 bg-light rounded border text-start">
+              <label className="form-label xsmall font-weight-bold text-teal d-flex align-items-center mb-1" style={{ color: '#0D9488' }}>
+                Billing Adjustments & Special Tools
+              </label>
+              <p className="xsmall text-muted mb-2">Pre-recommend adjustments based on case severity and special instruments used. This will pop up in the receptionist's billing panel.</p>
+              
+              <div className="row g-2">
+                <div className="col-sm-6">
+                  <label className="form-label xsmall font-weight-bold text-secondary">Severity Pricing</label>
+                  <select 
+                    className="form-select form-select-sm"
+                    value={severityAdjustment}
+                    onChange={(e) => setSeverityAdjustment(e.target.value)}
+                  >
+                    <option value="none">Fixed / Standard Clinic Rate</option>
+                    <option value="moderate">Moderate Case (+₱1,000 deep scale)</option>
+                    <option value="severe">Severe Case (+₱2,000 ultrasonic & tools)</option>
+                    <option value="custom">Custom recommended rate...</option>
+                  </select>
+                </div>
+                {severityAdjustment === 'custom' && (
+                  <div className="col-sm-6">
+                    <label className="form-label xsmall font-weight-bold text-secondary">Recommended Rate (₱)</label>
+                    <input 
+                      type="number" 
+                      className="form-control form-control-sm"
+                      placeholder="e.g. 1500"
+                      value={customPrice}
+                      onChange={(e) => setCustomPrice(e.target.value)}
+                    />
+                  </div>
+                )}
+                <div className="col-12">
+                  <label className="form-label xsmall font-weight-bold text-secondary">Special Instruments Required</label>
+                  <input 
+                    type="text" 
+                    className="form-control form-control-sm"
+                    placeholder="e.g. Ultrasonic scaler, laser sterilization, subgingival curettes"
+                    value={specialTools}
+                    onChange={(e) => setSpecialTools(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
 
             <button 

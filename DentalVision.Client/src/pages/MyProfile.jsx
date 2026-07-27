@@ -3,6 +3,23 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { FaUser, FaInfoCircle, FaCalendarAlt, FaFileInvoiceDollar, FaExclamationTriangle, FaEdit, FaSave } from 'react-icons/fa';
 
+const COMMON_ALLERGIES = [
+  { id: 'penicillin', label: 'Penicillin / Amoxicillin', category: 'Drug' },
+  { id: 'latex', label: 'Latex (Gloves / Dams)', category: 'Material' },
+  { id: 'anesthetic', label: 'Local Anesthesia (Lidocaine)', category: 'Drug' },
+  { id: 'sulfa', label: 'Sulfa Drugs', category: 'Drug' },
+  { id: 'aspirin', label: 'Aspirin / Ibuprofen', category: 'Drug' }
+];
+
+const COMMON_CONDITIONS = [
+  { id: 'hypertension', label: 'Hypertension (High BP)', category: 'Condition' },
+  { id: 'diabetes', label: 'Diabetes', category: 'Condition' },
+  { id: 'heart', label: 'Heart Conditions / Pacemaker', category: 'Condition' },
+  { id: 'asthma', label: 'Asthma / Breathing issues', category: 'Condition' },
+  { id: 'bleeding', label: 'Bleeding Disorders / Blood thinners', category: 'Condition' },
+  { id: 'pregnant', label: 'Currently Pregnant', category: 'Condition' }
+];
+
 const MyProfile = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
@@ -23,6 +40,11 @@ const MyProfile = () => {
 
   const [appointments, setAppointments] = useState([]);
   const [invoices, setInvoices] = useState([]);
+
+  // Medical History state hooks
+  const [selectedAllergies, setSelectedAllergies] = useState([]);
+  const [selectedConditions, setSelectedConditions] = useState([]);
+  const [customMedicalNotes, setCustomMedicalNotes] = useState('');
 
   // Appointment Booking form states
   const [showBookModal, setShowBookModal] = useState(false);
@@ -86,6 +108,34 @@ const MyProfile = () => {
         medicalHistory: res.data.medicalHistory || ''
       });
 
+      const historyText = res.data.medicalHistory || '';
+      const parsedAlgs = [];
+      const parsedConds = [];
+      
+      COMMON_ALLERGIES.forEach(item => {
+        if (historyText.toLowerCase().includes(item.label.toLowerCase())) {
+          parsedAlgs.push(item.id);
+        }
+      });
+      COMMON_CONDITIONS.forEach(item => {
+        if (historyText.toLowerCase().includes(item.label.toLowerCase())) {
+          parsedConds.push(item.id);
+        }
+      });
+      
+      setSelectedAllergies(parsedAlgs);
+      setSelectedConditions(parsedConds);
+      
+      const customLines = historyText.split('\n').filter(line => {
+        const clean = line.trim();
+        return !clean.startsWith('• Allergy:') && 
+               !clean.startsWith('• Condition:') && 
+               clean !== '[Allergies]' && 
+               clean !== '[Conditions]' &&
+               clean !== '[Custom Notes]';
+      });
+      setCustomMedicalNotes(customLines.join('\n').trim());
+
       // Fetch appointments & invoices for this patient
       try {
         const apptsRes = await api.get('/appointments');
@@ -131,6 +181,21 @@ const MyProfile = () => {
     e.preventDefault();
     setError('');
     try {
+      const allergiesStr = selectedAllergies.map(id => {
+        const item = COMMON_ALLERGIES.find(a => a.id === id);
+        return item ? `• Allergy: ${item.label}` : '';
+      }).filter(Boolean).join('\n');
+
+      const conditionsStr = selectedConditions.map(id => {
+        const item = COMMON_CONDITIONS.find(c => c.id === id);
+        return item ? `• Condition: ${item.label}` : '';
+      }).filter(Boolean).join('\n');
+
+      let combinedHistory = '';
+      if (allergiesStr) combinedHistory += `[Allergies]\n${allergiesStr}\n\n`;
+      if (conditionsStr) combinedHistory += `[Conditions]\n${conditionsStr}\n\n`;
+      if (customMedicalNotes.trim()) combinedHistory += `[Custom Notes]\n${customMedicalNotes.trim()}`;
+
       const payload = {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -138,8 +203,8 @@ const MyProfile = () => {
         gender: formData.gender,
         phone: formData.phone,
         address: formData.address,
-        email: user?.email, // set by backend but nice to pass
-        medicalHistory: formData.medicalHistory
+        email: user?.email,
+        medicalHistory: combinedHistory.trim()
       };
 
       const res = await api.post('/patients/my-profile', payload);
@@ -284,21 +349,93 @@ const MyProfile = () => {
                   </div>
 
                   <div className="col-12">
-                    <div className="p-3 bg-light rounded" style={{ borderLeft: '4px solid #EF4444' }}>
-                      <label className="form-label small font-weight-bold text-danger d-flex align-items-center">
-                        <FaExclamationTriangle className="me-2" /> Medical History, Conditions, & Allergies
-                      </label>
-                      <textarea
-                        className="form-control mt-1"
-                        name="medicalHistory"
-                        value={formData.medicalHistory}
-                        onChange={handleInputChange}
-                        rows="3"
-                        placeholder="IMPORTANT: Please specify any known drug allergies (e.g. Penicillin, Latex) or medical conditions (e.g. Hypertension, Diabetes) here so your dentist is notified."
-                        required
-                      ></textarea>
-                    </div>
-                  </div>
+                     <div className="p-3 bg-light rounded text-start" style={{ borderLeft: '4px solid #EF4444' }}>
+                       <label className="form-label small font-weight-bold text-danger d-flex align-items-center mb-2">
+                         <FaExclamationTriangle className="me-2" /> Medical History & Critical Warnings
+                       </label>
+                       <p className="xsmall text-secondary mb-3">Please select any categories that apply. Toggled pills are immediately highlighted in red inside the Dentist portal to guarantee clinical safety.</p>
+                       
+                       {/* Drug & Material Allergies */}
+                       <div className="mb-3">
+                         <div className="xsmall font-weight-bold text-secondary mb-2" style={{ letterSpacing: '0.5px' }}>DRUG & MATERIAL ALLERGIES</div>
+                         <div className="d-flex flex-wrap gap-2">
+                           {COMMON_ALLERGIES.map(item => {
+                             const isSelected = selectedAllergies.includes(item.id);
+                             return (
+                               <button
+                                 key={item.id}
+                                 type="button"
+                                 onClick={() => {
+                                   setSelectedAllergies(prev => 
+                                     prev.includes(item.id) 
+                                       ? prev.filter(x => x !== item.id) 
+                                       : [...prev, item.id]
+                                   );
+                                 }}
+                                 className="btn btn-sm px-3 py-1-5 rounded-pill border"
+                                 style={{
+                                   fontSize: '12px',
+                                   fontWeight: isSelected ? 'bold' : 'normal',
+                                   backgroundColor: isSelected ? '#FEE2E2' : '#ffffff',
+                                   color: isSelected ? '#991B1B' : '#475569',
+                                   borderColor: isSelected ? '#FCA5A5' : '#cbd5e1',
+                                   transition: 'all 0.2s ease-in-out'
+                                 }}
+                               >
+                                 {item.label} {isSelected && '✓'}
+                               </button>
+                             );
+                           })}
+                         </div>
+                       </div>
+
+                       {/* Medical Conditions */}
+                       <div className="mb-3">
+                         <div className="xsmall font-weight-bold text-secondary mb-2" style={{ letterSpacing: '0.5px' }}>GENERAL MEDICAL CONDITIONS</div>
+                         <div className="d-flex flex-wrap gap-2">
+                           {COMMON_CONDITIONS.map(item => {
+                             const isSelected = selectedConditions.includes(item.id);
+                             return (
+                               <button
+                                 key={item.id}
+                                 type="button"
+                                 onClick={() => {
+                                   setSelectedConditions(prev => 
+                                     prev.includes(item.id) 
+                                       ? prev.filter(x => x !== item.id) 
+                                       : [...prev, item.id]
+                                   );
+                                 }}
+                                 className="btn btn-sm px-3 py-1-5 rounded-pill border"
+                                 style={{
+                                   fontSize: '12px',
+                                   fontWeight: isSelected ? 'bold' : 'normal',
+                                   backgroundColor: isSelected ? '#FEF3C7' : '#ffffff',
+                                   color: isSelected ? '#92400E' : '#475569',
+                                   borderColor: isSelected ? '#FCD34D' : '#cbd5e1',
+                                   transition: 'all 0.2s ease-in-out'
+                                 }}
+                               >
+                                 {item.label} {isSelected && '✓'}
+                               </button>
+                             );
+                           })}
+                         </div>
+                       </div>
+
+                       {/* Additional Notes */}
+                       <div className="mt-3">
+                         <label className="form-label xsmall font-weight-bold text-secondary">OTHER MEDICAL CONDITIONS / ADDITIONAL NOTES</label>
+                         <textarea
+                           className="form-control form-control-sm mt-1"
+                           value={customMedicalNotes}
+                           onChange={(e) => setCustomMedicalNotes(e.target.value)}
+                           rows="3"
+                           placeholder="Type any other conditions, current medications, or notes here..."
+                         ></textarea>
+                       </div>
+                     </div>
+                   </div>
                 </div>
 
                 <div className="mt-4 pt-3 border-top text-end">
@@ -570,10 +707,10 @@ const MyProfile = () => {
                         </td>
                         <td>
                           <span className={`badge px-2 py-1 rounded ${
-                            inv.paymentStatus === 'Paid' ? 'bg-success' :
-                            inv.paymentStatus === 'PartiallyPaid' ? 'bg-warning text-dark' : 'bg-danger'
+                            inv.paymentStatus === 'Paid' || inv.paymentStatus === 2 ? 'bg-success' :
+                            inv.paymentStatus === 'PartiallyPaid' || inv.paymentStatus === 1 ? 'bg-warning text-dark' : 'bg-danger'
                           }`}>
-                            {inv.paymentStatus}
+                            {inv.paymentStatus === 0 ? 'Unpaid' : inv.paymentStatus === 1 ? 'PartiallyPaid' : inv.paymentStatus === 2 ? 'Paid' : inv.paymentStatus}
                           </span>
                         </td>
                       </tr>

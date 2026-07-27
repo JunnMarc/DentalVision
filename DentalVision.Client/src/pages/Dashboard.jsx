@@ -206,44 +206,46 @@ const Dashboard = () => {
         {/* Validation and Reports Tables */}
         <div className="row g-4">
           {/* Pending Validations */}
-          <div className="col-md-6">
-            <div className="clinic-card">
-              <h5 className="mb-3 font-weight-bold">Plaque Mapping Tasks</h5>
-              {data?.pendingValidations?.length === 0 ? (
-                <p className="text-muted small">No pending plaque maps to validate.</p>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table table-hover table-clinic align-middle">
-                    <thead>
-                      <tr>
-                        <th>Patient</th>
-                        <th>Coverage</th>
-                        <th>Uploaded At</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data?.pendingValidations?.map(v => (
-                        <tr key={v.analysisId}>
-                          <td className="font-weight-bold">{v.patientName}</td>
-                          <td><span className="badge bg-danger">{v.coveragePercentage}%</span></td>
-                          <td>{new Date(v.uploadedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                          <td>
-                            <Link to={`/plaque/validate/${v.analysisId}`} className="btn btn-sm btn-teal-clinic">
-                              Map <FaArrowRight size={10} />
-                            </Link>
-                          </td>
+          {hasRole(['Dentist']) && (
+            <div className="col-md-6">
+              <div className="clinic-card">
+                <h5 className="mb-3 font-weight-bold">Plaque Mapping Tasks</h5>
+                {data?.pendingValidations?.length === 0 ? (
+                  <p className="text-muted small">No pending plaque maps to validate.</p>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="table table-hover table-clinic align-middle">
+                      <thead>
+                        <tr>
+                          <th>Patient</th>
+                          <th>Coverage</th>
+                          <th>Uploaded At</th>
+                          <th>Action</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                      </thead>
+                      <tbody>
+                        {data?.pendingValidations?.map(v => (
+                          <tr key={v.analysisId}>
+                            <td className="font-weight-bold">{v.patientName}</td>
+                            <td><span className="badge bg-danger">{v.coveragePercentage}%</span></td>
+                            <td>{new Date(v.uploadedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                            <td>
+                              <Link to={`/plaque/validate/${v.analysisId}`} className="btn btn-sm btn-teal-clinic">
+                                Map <FaArrowRight size={10} />
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Recent Reports */}
-          <div className="col-md-6">
+          <div className={hasRole(['Dentist']) ? "col-md-6" : "col-12"}>
             <div className="clinic-card">
               <h5 className="mb-3 font-weight-bold">Recent Clinical Assessment History</h5>
               {data?.recentReports?.length === 0 ? (

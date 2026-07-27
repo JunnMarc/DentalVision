@@ -37,7 +37,7 @@ const AppLayout = ({ children }) => {
     { path: '/patients', label: 'Patients', icon: <FaUserFriends />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
     { path: '/appointments', label: 'Appointments', icon: <FaCalendarAlt />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
     { path: '/billing', label: 'Billing & Payments', icon: <FaFileInvoiceDollar />, roles: ['Administrator', 'Dental Staff'] },
-    { path: '/plaque/upload', label: 'Dental Upload', icon: <FaCamera />, roles: ['Dentist', 'Dental Staff'] },
+    { path: '/plaque/upload', label: 'Dental Upload', icon: <FaCamera />, roles: ['Dentist'] },
     { path: '/reports', label: 'Clinical Reports', icon: <FaFileAlt />, roles: ['Administrator', 'Dentist'] },
     { path: '/users', label: 'Staff Accounts', icon: <FaUserFriends />, roles: ['Administrator'] },
     { path: '/logs', label: 'Audit Logs', icon: <FaHistory />, roles: ['Administrator'] },

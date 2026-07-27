@@ -5,6 +5,18 @@ import argparse
 import sys
 import os
 
+from enum import Enum
+
+class SegmentationMode(Enum):
+    AUTO = "AUTO"
+    ROBOFLOW = "ROBOFLOW"
+    YOLO = "YOLO"
+    OPENCV = "OPENCV"
+    COLOR_TEETH = "COLOR_TEETH"
+
+# EDIT THIS CONFIGURATION TO ENFORCE SPECIFIC MODES DURING TESTING
+ACTIVE_MODE = SegmentationMode.AUTO 
+
 try:
     from ultralytics import YOLO
     HAS_YOLO = True
@@ -22,7 +34,7 @@ def analyze_plaque(image_path, brightness=0, contrast=1.0, denoise_radius=3):
     img = cv2.imread(image_path)
     
     # Segmentation parameters (Adjust confidence and overlap/IoU threshold here)
-    CONFIDENCE_THRESHOLD = 0.40  # Lower this (e.g., to 0.15 or 0.10) if some teeth are missed
+    CONFIDENCE_THRESHOLD = 0.25  # Lower this (e.g., to 0.15 or 0.10) if some teeth are missed
     OVERLAP_THRESHOLD = 0.50     # Adjust IoU (e.g., to 0.30 or 0.45) to resolve overlapping detections
     ENABLE_LOCAL_YOLO = False    # Set to True to enable local YOLOv8-seg edge inference fallback
     
@@ -98,9 +110,160 @@ def analyze_plaque(image_path, brightness=0, contrast=1.0, denoise_radius=3):
     if not os.path.exists(weights_path):
         weights_path = os.path.join(script_dir, "weights", "yolov8n-dental-seg.pt")
 
-    # 5. Segmentation Pipeline (Roboflow Cloud -> YOLO Edge -> OpenCV Fallback)
+    # 5. Segmentation Pipeline (Enforces ACTIVE_MODE)
+    if ACTIVE_MODE == SegmentationMode.COLOR_TEETH:
+        # Teeth HSV threshold: low saturation, high brightness
+        lower_tooth_hsv = np.array([0, 0, 100])
+        upper_tooth_hsv = np.array([180, 80, 255])
+        teeth_mask = cv2.inRange(hsv, lower_tooth_hsv, upper_tooth_hsv)
+        
+        # Subtract gums
+        teeth_mask = cv2.bitwise_and(teeth_mask, cv2.bitwise_not(gum_mask))
+        
+        # Cleanup
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        teeth_mask = cv2.morphologyEx(teeth_mask, cv2.MORPH_OPEN, kernel)
+        teeth_mask = cv2.morphologyEx(teeth_mask, cv2.MORPH_CLOSE, kernel)
+        
+        # Find individual tooth contours
+        contours, _ = cv2.findContours(teeth_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        mappings = []
+        total_teeth_pixels = 0
+        total_plaque_pixels = 0
+        
+        for idx, cnt in enumerate(contours):
+            cnt = cv2.convexHull(cnt)
+            area = cv2.contourArea(cnt)
+            if area < 500: # Ignore noise
+                continue
+                
+            # Get centroid of tooth
+            M = cv2.moments(cnt)
+            if M["m00"] == 0:
+                continue
+            tcx = int(M["m10"] / M["m00"])
+            tcy = int(M["m01"] / M["m00"])
+            
+            x_ratio = tcx / w
+            y_ratio = tcy / h
+            
+            # Map FDI tooth number based on space
+            if y_ratio < 0.58:
+                if x_ratio < 0.5:
+                    tooth_num = 18 - int(x_ratio * 2 * 7.9)
+                else:
+                    tooth_num = 21 + int((x_ratio - 0.5) * 2 * 7.9)
+            else:
+                if x_ratio < 0.5:
+                    tooth_num = 48 - int(x_ratio * 2 * 7.9)
+                else:
+                    tooth_num = 31 + int((x_ratio - 0.5) * 2 * 7.9)
+                    
+            if y_ratio < 0.58:
+                tooth_num = max(11, min(28, tooth_num))
+            else:
+                tooth_num = max(31, min(48, tooth_num))
+                
+            # Create single tooth mask
+            single_tooth_mask = np.zeros(processed.shape[:2], dtype=np.uint8)
+            cv2.drawContours(single_tooth_mask, [cnt], -1, 255, -1)
+            
+            # Find localized vertical bounds of this specific tooth crown
+            pts_indices = np.where(single_tooth_mask > 0)
+            if len(pts_indices[0]) > 0:
+                ymin_t = int(np.min(pts_indices[0]))
+                ymax_t = int(np.max(pts_indices[0]))
+            else:
+                ymin_t, ymax_t = int(tcy - 10), int(tcy + 10)
+                
+            tooth_h = ymax_t - ymin_t
+
+            # Create a cervical-third (gumline) mask for this tooth
+            cervical_mask = np.zeros_like(single_tooth_mask)
+            if y_ratio < 0.58:
+                # Upper teeth: Top third is cervical (gumline)
+                cervical_boundary = ymin_t + int(tooth_h * 0.33)
+                cervical_mask[ymin_t:max(ymin_t + 1, cervical_boundary), :] = 255
+            else:
+                # Lower teeth: Bottom third is cervical (gumline)
+                cervical_boundary = ymax_t - int(tooth_h * 0.33)
+                cervical_mask[min(ymax_t - 1, cervical_boundary):ymax_t, :] = 255
+
+            # Restrict the tooth mask to ONLY the cervical third
+            cervical_tooth_mask = cv2.bitwise_and(single_tooth_mask, cervical_mask)
+
+            # Calculate plaque pixels strictly inside the cervical third (gumline)
+            tooth_plaque = cv2.bitwise_and(plaque_mask, cervical_tooth_mask)
+            
+            t_area = cv2.countNonZero(cervical_tooth_mask)
+            p_area = cv2.countNonZero(tooth_plaque)
+            
+            total_teeth_pixels += t_area
+            total_plaque_pixels += p_area
+            
+            # Find plaque contours strictly local to this tooth crown
+            plaque_cnts, _ = cv2.findContours(tooth_plaque, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            for pcnt in plaque_cnts:
+                pcnt = cv2.convexHull(pcnt)
+                p_cnt_area = cv2.contourArea(pcnt)
+                if p_cnt_area < 20:
+                    continue
+                    
+                epsilon = 0.015 * cv2.arcLength(pcnt, True)
+                approx = cv2.approxPolyDP(pcnt, epsilon, True)
+                
+                coords = []
+                for pt in approx:
+                    pt_x, pt_y = pt[0]
+                    coords.append({
+                        "x": int((pt_x / w) * 600),
+                        "y": int((pt_y / h) * 400)
+                    })
+                    
+                plaque_ratio = (p_area / max(1, t_area)) * 100
+                plaque_level = "Low"
+                if plaque_ratio > 30:
+                    plaque_level = "High"
+                elif plaque_ratio > 10:
+                    plaque_level = "Medium"
+                    
+                # Determine anatomical thirds
+                M_cnt = cv2.moments(pcnt)
+                cy_mom = int(M_cnt["m01"] / M_cnt["m00"]) if M_cnt["m00"] > 0 else int(approx[0][0][1])
+                rel_y = (cy_mom - ymin_t) / max(1, tooth_h)
+                
+                region = "Cervical"
+                if y_ratio < 0.58:
+                    if rel_y >= 0.66:
+                        region = "Incisal"
+                    elif rel_y >= 0.33:
+                        region = "Middle"
+                else:
+                    if rel_y < 0.33:
+                        region = "Incisal"
+                    elif rel_y < 0.66:
+                        region = "Middle"
+                        
+                mappings.append({
+                    "toothNumber": tooth_num,
+                    "plaqueLevel": plaque_level,
+                    "gumlineRegion": region,
+                    "coordinates": coords
+                })
+                
+        coverage_percent = round((total_plaque_pixels / max(1, total_teeth_pixels)) * 100, 1)
+        return {
+            "status": "success",
+            "engine": "OpenCV (Color-Based Teeth Segmentation)",
+            "coverage_percentage": coverage_percent,
+            "confidence_score": 0.85,
+            "mappings": mappings
+        }
+
+    # Roboflow pipeline check
     api_key = os.environ.get("ROBOFLOW_API_KEY", "yQHvjs9GBBuMd1jodvqI")
-    if api_key:
+    if ACTIVE_MODE in [SegmentationMode.AUTO, SegmentationMode.ROBOFLOW] and api_key:
         try:
             import urllib.request
             import urllib.error
@@ -212,10 +375,34 @@ def analyze_plaque(image_path, brightness=0, contrast=1.0, denoise_radius=3):
                     single_tooth_mask = cv2.bitwise_and(single_tooth_mask, cv2.bitwise_not(gum_mask))
                     global_assigned_mask = cv2.bitwise_or(global_assigned_mask, single_tooth_mask)
                     
-                    # Calculate plaque pixels strictly inside this tooth boundary
-                    tooth_plaque = cv2.bitwise_and(plaque_mask, single_tooth_mask)
+                    # Find localized bounds of this specific single tooth mask
+                    pts_indices = np.where(single_tooth_mask > 0)
+                    if len(pts_indices[0]) > 0:
+                        ymin_t = int(np.min(pts_indices[0]))
+                        ymax_t = int(np.max(pts_indices[0]))
+                    else:
+                        ymin_t, ymax_t = ymin, ymax
+                        
+                    tooth_h = ymax_t - ymin_t
+
+                    # Create a cervical-third (gumline) mask for this tooth
+                    cervical_mask = np.zeros_like(single_tooth_mask)
+                    if y_ratio < 0.58:
+                        # Upper teeth: Top third is cervical (gumline)
+                        cervical_boundary = ymin_t + int(tooth_h * 0.33)
+                        cervical_mask[ymin_t:max(ymin_t + 1, cervical_boundary), :] = 255
+                    else:
+                        # Lower teeth: Bottom third is cervical (gumline)
+                        cervical_boundary = ymax_t - int(tooth_h * 0.33)
+                        cervical_mask[min(ymax_t - 1, cervical_boundary):ymax_t, :] = 255
+
+                    # Restrict the tooth mask to ONLY the cervical third
+                    cervical_tooth_mask = cv2.bitwise_and(single_tooth_mask, cervical_mask)
+
+                    # Calculate plaque pixels strictly inside the cervical third (gumline)
+                    tooth_plaque = cv2.bitwise_and(plaque_mask, cervical_tooth_mask)
                     
-                    tooth_area = cv2.countNonZero(single_tooth_mask)
+                    tooth_area = cv2.countNonZero(cervical_tooth_mask)
                     plaque_area = cv2.countNonZero(tooth_plaque)
                     
                     total_teeth_pixels += tooth_area
@@ -249,16 +436,6 @@ def analyze_plaque(image_path, brightness=0, contrast=1.0, denoise_radius=3):
                             
                         M_cnt = cv2.moments(cnt)
                         cy_mom = int(M_cnt["m01"] / M_cnt["m00"]) if M_cnt["m00"] > 0 else int(approx[0][0][1])
-                        
-                        # Find localized bounds of this specific single tooth mask
-                        pts_indices = np.where(single_tooth_mask > 0)
-                        if len(pts_indices[0]) > 0:
-                            ymin_t = int(np.min(pts_indices[0]))
-                            ymax_t = int(np.max(pts_indices[0]))
-                        else:
-                            ymin_t, ymax_t = ymin, ymax
-                            
-                        tooth_h = ymax_t - ymin_t
                         
                         # Determine anatomical thirds
                         rel_y = (cy_mom - ymin_t) / max(1, tooth_h)
@@ -300,9 +477,11 @@ def analyze_plaque(image_path, brightness=0, contrast=1.0, denoise_radius=3):
         except Exception as rf_err:
             traceback.print_exc()
             print(f"[plaque_processor] Roboflow API error: {rf_err}. Falling back to standard mode.", file=sys.stderr)
+            if ACTIVE_MODE == SegmentationMode.ROBOFLOW:
+                raise rf_err
             pass
 
-    if ENABLE_LOCAL_YOLO and HAS_YOLO and os.path.exists(weights_path):
+    if (ENABLE_LOCAL_YOLO or ACTIVE_MODE == SegmentationMode.YOLO) and ACTIVE_MODE in [SegmentationMode.AUTO, SegmentationMode.YOLO] and HAS_YOLO and os.path.exists(weights_path):
         try:
             # Stage 1: Tooth Instance Segmentation using YOLOv8-seg model
             model = YOLO(weights_path)
@@ -382,10 +561,34 @@ def analyze_plaque(image_path, brightness=0, contrast=1.0, denoise_radius=3):
                     single_tooth_mask = cv2.bitwise_and(single_tooth_mask, cv2.bitwise_not(gum_mask))
                     global_assigned_mask = cv2.bitwise_or(global_assigned_mask, single_tooth_mask)
                     
-                    # Calculate plaque pixels strictly inside this tooth boundary
-                    tooth_plaque = cv2.bitwise_and(plaque_mask, single_tooth_mask)
+                    # Find localized bounds of this specific single tooth mask
+                    pts_indices = np.where(single_tooth_mask > 0)
+                    if len(pts_indices[0]) > 0:
+                        ymin_t = int(np.min(pts_indices[0]))
+                        ymax_t = int(np.max(pts_indices[0]))
+                    else:
+                        ymin_t, ymax_t = ymin, ymax
+                        
+                    tooth_h = ymax_t - ymin_t
+
+                    # Create a cervical-third (gumline) mask for this tooth
+                    cervical_mask = np.zeros_like(single_tooth_mask)
+                    if y_ratio < 0.58:
+                        # Upper teeth: Top third is cervical (gumline)
+                        cervical_boundary = ymin_t + int(tooth_h * 0.33)
+                        cervical_mask[ymin_t:max(ymin_t + 1, cervical_boundary), :] = 255
+                    else:
+                        # Lower teeth: Bottom third is cervical (gumline)
+                        cervical_boundary = ymax_t - int(tooth_h * 0.33)
+                        cervical_mask[min(ymax_t - 1, cervical_boundary):ymax_t, :] = 255
+
+                    # Restrict the tooth mask to ONLY the cervical third
+                    cervical_tooth_mask = cv2.bitwise_and(single_tooth_mask, cervical_mask)
+
+                    # Calculate plaque pixels strictly inside the cervical third (gumline)
+                    tooth_plaque = cv2.bitwise_and(plaque_mask, cervical_tooth_mask)
                     
-                    tooth_area = cv2.countNonZero(single_tooth_mask)
+                    tooth_area = cv2.countNonZero(cervical_tooth_mask)
                     plaque_area = cv2.countNonZero(tooth_plaque)
                     
                     total_teeth_pixels += tooth_area
@@ -419,16 +622,6 @@ def analyze_plaque(image_path, brightness=0, contrast=1.0, denoise_radius=3):
                             
                         M_cnt = cv2.moments(cnt)
                         cy_mom = int(M_cnt["m01"] / M_cnt["m00"]) if M_cnt["m00"] > 0 else int(approx[0][0][1])
-                        
-                        # Find localized bounds of this specific single tooth mask
-                        pts_indices = np.where(single_tooth_mask > 0)
-                        if len(pts_indices[0]) > 0:
-                            ymin_t = int(np.min(pts_indices[0]))
-                            ymax_t = int(np.max(pts_indices[0]))
-                        else:
-                            ymin_t, ymax_t = ymin, ymax
-                            
-                        tooth_h = ymax_t - ymin_t
                         
                         # Determine anatomical thirds
                         rel_y = (cy_mom - ymin_t) / max(1, tooth_h)
@@ -468,6 +661,8 @@ def analyze_plaque(image_path, brightness=0, contrast=1.0, denoise_radius=3):
                 }
         except Exception as ml_err:
             # Fall back to CV mode silently on any YOLO loading/execution errors
+            if ACTIVE_MODE == SegmentationMode.YOLO:
+                raise ml_err
             pass
 
     # Stage 2 Fallback: CV-based Thresholding and Boundary Masking

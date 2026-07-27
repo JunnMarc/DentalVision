@@ -88,7 +88,7 @@ const AppRoutes = () => {
       <Route 
         path="/plaque/upload" 
         element={
-          <PrivateRoute allowedRoles={['Dentist', 'Dental Staff']}>
+          <PrivateRoute allowedRoles={['Dentist']}>
             <UploadImage />
           </PrivateRoute>
         } 
@@ -96,7 +96,7 @@ const AppRoutes = () => {
       <Route 
         path="/plaque/validate/:analysisId" 
         element={
-          <PrivateRoute allowedRoles={['Dentist', 'Administrator']}>
+          <PrivateRoute allowedRoles={['Dentist']}>
             <PlaqueValidation />
           </PrivateRoute>
         } 

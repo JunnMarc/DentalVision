@@ -8,6 +8,7 @@ using DentalVision.Application.Interfaces;
 using DentalVision.Domain.Entities;
 using DentalVision.Domain.Enums;
 using DentalVision.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace DentalVision.Application.Services
 {
@@ -24,13 +25,19 @@ namespace DentalVision.Application.Services
 
         public async Task<InvoiceDto?> GetInvoiceByIdAsync(int id)
         {
-            var invoice = _unitOfWork.Invoices.Find(i => i.Id == id).FirstOrDefault();
+            var invoice = _unitOfWork.Invoices.Find(i => i.Id == id)
+                .Include(i => i.Patient)
+                .Include(i => i.Items)
+                .FirstOrDefault();
             return _mapper.Map<InvoiceDto>(invoice);
         }
 
         public async Task<IEnumerable<InvoiceDto>> GetInvoicesByPatientIdAsync(int patientId)
         {
-            var invoices = _unitOfWork.Invoices.Find(i => i.PatientId == patientId).ToList();
+            var invoices = _unitOfWork.Invoices.Find(i => i.PatientId == patientId)
+                .Include(i => i.Patient)
+                .Include(i => i.Items)
+                .ToList();
             return _mapper.Map<IEnumerable<InvoiceDto>>(invoices);
         }
 
@@ -63,7 +70,10 @@ namespace DentalVision.Application.Services
             await _unitOfWork.Invoices.AddAsync(invoice);
             await _unitOfWork.CompleteAsync();
 
-            var created = _unitOfWork.Invoices.Find(i => i.Id == invoice.Id).First();
+            var created = _unitOfWork.Invoices.Find(i => i.Id == invoice.Id)
+                .Include(i => i.Patient)
+                .Include(i => i.Items)
+                .First();
             return _mapper.Map<InvoiceDto>(created);
         }
 

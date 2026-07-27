@@ -32,6 +32,7 @@ namespace DentalVision.API.Controllers
         }
 
         [HttpPost("upload")]
+        [Authorize(Roles = "Dentist")]
         public async Task<IActionResult> UploadImage(
             [FromForm] IFormFile file, 
             [FromForm] int patientId, 
@@ -132,7 +133,7 @@ namespace DentalVision.API.Controllers
         }
 
         [HttpPost("analysis/{analysisId}/validate")]
-        [Authorize(Roles = "Dentist,Administrator")]
+        [Authorize(Roles = "Dentist")]
         public async Task<IActionResult> ValidateAnalysis(int analysisId, [FromBody] ValidateAnalysisDto request)
         {
             var analysis = _unitOfWork.PlaqueAnalyses.Find(a => a.Id == analysisId).FirstOrDefault();
