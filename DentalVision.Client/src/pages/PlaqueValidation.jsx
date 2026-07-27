@@ -17,7 +17,12 @@ const PlaqueValidation = () => {
   const navigate = useNavigate();
 
   const canvasRef = useRef(null);
-  const [markerNodes, setMarkerNodes] = useState([]); // List of custom nodes placed by dentist
+  const [activeTooltip, setActiveTooltip] = useState(null); // Track custom nodes edit tooltip
+
+  const fdiTeeth = [
+    18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28,
+    38, 37, 36, 35, 34, 33, 32, 31, 48, 47, 46, 45, 44, 43, 42, 41
+  ];
 
   const getUniqueMappings = () => {
     const unique = {};
@@ -46,23 +51,6 @@ const PlaqueValidation = () => {
         // Find path
         // Since the database contains the relative filepath, we map it to the backend host
         setImagePath(data.imageId ? `http://localhost:5098/api/plaque/analysis/image/${data.imageId}` : '');
-        // For local demo rendering if backend image is not found, we fallback to a premium placeholder gradient
-        
-        // Parse mock coordinates nodes
-        if (data.mappings && data.mappings.length > 0) {
-          const nodes = [];
-          data.mappings.forEach(m => {
-            try {
-              const coords = JSON.parse(m.coordinatesJson);
-              if (Array.isArray(coords)) {
-                coords.forEach(pt => {
-                  nodes.push({ toothNumber: m.toothNumber, x: pt.x, y: pt.y });
-                });
-              }
-            } catch (err) {}
-          });
-          setMarkerNodes(nodes);
-        }
       } catch (error) {
         console.error("Error loading plaque analysis record:", error);
       }
@@ -84,12 +72,14 @@ const PlaqueValidation = () => {
       try {
         const coords = JSON.parse(m.coordinatesJson);
         if (Array.isArray(coords) && coords.length > 0) {
-          // Color code transparent mask based on plaque severity
           ctx.fillStyle = m.plaqueLevel === 'High' 
-            ? 'rgba(239, 68, 68, 0.42)'  // Semi-transparent Red
+            ? 'rgba(0, 255, 0, 0.52)'   // Bright neon green
             : m.plaqueLevel === 'Medium' 
-              ? 'rgba(245, 158, 11, 0.42)' // Semi-transparent Orange/Yellow
-              : 'rgba(20, 184, 166, 0.38)'; // Semi-transparent Teal/Blue
+              ? 'rgba(50, 255, 50, 0.42)' // Mid neon green
+              : 'rgba(100, 255, 100, 0.32)'; // Soft neon green
+          
+          ctx.strokeStyle = 'rgba(0, 255, 0, 0.75)';
+          ctx.lineWidth = 1.5;
           
           ctx.beginPath();
           coords.forEach((pt, idx) => {
@@ -99,7 +89,8 @@ const PlaqueValidation = () => {
           if (coords.length > 2) {
             ctx.closePath();
           }
-          ctx.fill(); // Fill only, no outline stroke to remove mesh clutter
+          ctx.fill(); 
+          ctx.stroke();
         }
       } catch (err) {}
     });
@@ -148,71 +139,188 @@ const PlaqueValidation = () => {
       ctx.textBaseline = 'alphabetic';
     });
 
-    // Draw manual clicked marker nodes that are not yet saved
-    markerNodes.forEach(node => {
-      const existsInMappings = mappings.some(m => {
-        try {
-          const coords = JSON.parse(m.coordinatesJson);
-          return coords.some(pt => pt.x === node.x && pt.y === node.y);
-        } catch (e) { return false; }
-      });
-
-      if (!existsInMappings) {
-        ctx.fillStyle = '#10B981'; // Green dot for manual additions
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, 6, 0, 2 * Math.PI);
-        ctx.fill();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 9px sans-serif';
-        ctx.shadowColor = '#000000';
-        ctx.shadowBlur = 2;
-        ctx.fillText(node.toothNumber.toString(), node.x - 5, node.y - 10);
-        ctx.shadowBlur = 0;
-      }
+    // Draw vector anchor circles at all plaque coordinates
+    mappings.forEach(m => {
+      try {
+        const coords = JSON.parse(m.coordinatesJson);
+        if (Array.isArray(coords)) {
+          coords.forEach(pt => {
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, 4.5, 0, 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.strokeStyle = '#10B981';
+            ctx.lineWidth = 1.8;
+            ctx.stroke();
+          });
+        }
+      } catch (err) {}
     });
-  }, [mappings, markerNodes]);
+  }, [mappings]);
 
   const handleCanvasClick = (e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    
+    // Scale client click coordinates to the internal canvas coordinate space (600x400)
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+    
+    const displayX = e.clientX - rect.left;
+    const displayY = e.clientY - rect.top;
 
-    // Ask dentist which tooth number this plaque node corresponds to
-    const input = prompt("Enter Tooth Number (e.g. 11, 12, 21, 22):", "11");
-    const toothNumber = parseInt(input);
+    // Check if clicking near an existing anchor node (edit mode)
+    let foundNode = null;
+    mappings.forEach(m => {
+      try {
+        const coords = JSON.parse(m.coordinatesJson);
+        if (Array.isArray(coords)) {
+          coords.forEach((pt, idx) => {
+            const dist = Math.sqrt((pt.x - x) ** 2 + (pt.y - y) ** 2);
+            if (dist < 15) { // Radius of 15 internal coordinates
+              foundNode = {
+                x: pt.x,
+                y: pt.y,
+                displayX,
+                displayY,
+                toothNumber: m.toothNumber,
+                plaqueLevel: m.plaqueLevel,
+                gumlineRegion: m.gumlineRegion,
+                isEdit: true,
+                originalCoordIndex: idx,
+                originalMapping: m
+              };
+            }
+          });
+        }
+      } catch (err) {}
+    });
 
-    if (toothNumber && toothNumber >= 11 && toothNumber <= 48) {
-      const newNode = { toothNumber, x, y };
-      setMarkerNodes([...markerNodes, newNode]);
-      
-      // Update or insert tooth mapping
-      const existingMapping = mappings.find(m => m.toothNumber === toothNumber);
-      if (!existingMapping) {
-        const newMapping = {
-          toothNumber,
-          plaqueLevel: "High",
-          gumlineRegion: "Cervical",
-          coordinatesJson: JSON.stringify([{ x, y }])
-        };
-        setMappings([...mappings, newMapping]);
-      } else {
-        const coords = JSON.parse(existingMapping.coordinatesJson);
-        coords.push({ x, y });
-        existingMapping.coordinatesJson = JSON.stringify(coords);
-        setMappings([...mappings]);
-      }
-      
-      // Dynamically bump coverage percentage simulating added plaque spots!
-      setCoveragePercentage(prev => Math.min(100, Math.round((parseFloat(prev) + 1.5) * 10) / 10));
+    if (foundNode) {
+      setActiveTooltip(foundNode);
+    } else {
+      // Find closest tooth centroid to pre-select
+      let closestTooth = 11;
+      let minDistance = Infinity;
+      mappings.forEach(m => {
+        try {
+          const coords = JSON.parse(m.coordinatesJson);
+          if (Array.isArray(coords)) {
+            coords.forEach(pt => {
+              const dist = Math.sqrt((pt.x - x) ** 2 + (pt.y - y) ** 2);
+              if (dist < minDistance) {
+                minDistance = dist;
+                closestTooth = m.toothNumber;
+              }
+            });
+          }
+        } catch (e) {}
+      });
+
+      setActiveTooltip({
+        x,
+        y,
+        displayX,
+        displayY,
+        toothNumber: closestTooth,
+        plaqueLevel: 'High',
+        gumlineRegion: 'Cervical',
+        isEdit: false
+      });
     }
   };
 
+  const handleSaveTooltipNode = () => {
+    if (!activeTooltip) return;
+    const { x, y, toothNumber, plaqueLevel, gumlineRegion, isEdit, originalCoordIndex, originalMapping } = activeTooltip;
+
+    if (isEdit) {
+      const updatedMappings = mappings.map(m => {
+        if (m.toothNumber === originalMapping.toothNumber) {
+          const coords = JSON.parse(m.coordinatesJson);
+          if (toothNumber !== originalMapping.toothNumber) {
+            // Remove from current tooth coordinates
+            coords.splice(originalCoordIndex, 1);
+            return { ...m, coordinatesJson: JSON.stringify(coords) };
+          } else {
+            return { ...m, plaqueLevel, gumlineRegion };
+          }
+        }
+        return m;
+      }).filter(m => {
+        try {
+          const coords = JSON.parse(m.coordinatesJson);
+          return coords.length > 0;
+        } catch (e) { return false; }
+      });
+
+      if (toothNumber !== originalMapping.toothNumber) {
+        const targetMapping = updatedMappings.find(m => m.toothNumber === toothNumber);
+        if (targetMapping) {
+          const targetCoords = JSON.parse(targetMapping.coordinatesJson);
+          targetCoords.push({ x, y });
+          targetMapping.coordinatesJson = JSON.stringify(targetCoords);
+        } else {
+          updatedMappings.push({
+            toothNumber,
+            plaqueLevel,
+            gumlineRegion,
+            coordinatesJson: JSON.stringify([{ x, y }])
+          });
+        }
+      }
+      setMappings(updatedMappings);
+    } else {
+      const targetMapping = mappings.find(m => m.toothNumber === toothNumber);
+      if (targetMapping) {
+        const coords = JSON.parse(targetMapping.coordinatesJson);
+        coords.push({ x, y });
+        targetMapping.coordinatesJson = JSON.stringify(coords);
+        setMappings([...mappings]);
+      } else {
+        const newMapping = {
+          toothNumber,
+          plaqueLevel,
+          gumlineRegion,
+          coordinatesJson: JSON.stringify([{ x, y }])
+        };
+        setMappings([...mappings, newMapping]);
+      }
+      setCoveragePercentage(prev => Math.min(100, Math.round((parseFloat(prev) + 1.5) * 10) / 10));
+    }
+    setActiveTooltip(null);
+  };
+
+  const handleDeleteTooltipNode = () => {
+    if (!activeTooltip || !activeTooltip.isEdit) return;
+    const { originalCoordIndex, originalMapping } = activeTooltip;
+
+    const updatedMappings = mappings.map(m => {
+      if (m.toothNumber === originalMapping.toothNumber) {
+        const coords = JSON.parse(m.coordinatesJson);
+        coords.splice(originalCoordIndex, 1);
+        return { ...m, coordinatesJson: JSON.stringify(coords) };
+      }
+      return m;
+    }).filter(m => {
+      try {
+        const coords = JSON.parse(m.coordinatesJson);
+        return coords.length > 0;
+      } catch (e) { return false; }
+    });
+
+    setMappings(updatedMappings);
+    setCoveragePercentage(prev => Math.max(0, Math.round((parseFloat(prev) - 1.5) * 10) / 10));
+    setActiveTooltip(null);
+  };
+
   const handleResetMap = () => {
-    setMarkerNodes([]);
     setMappings([]);
-    setCoveragePercentage(12.5); // Default lower bound
+    setCoveragePercentage(12.5);
+    setActiveTooltip(null);
   };
 
   const handleMappingFieldChange = (toothNumber, field, value) => {
@@ -237,16 +345,27 @@ const PlaqueValidation = () => {
 
   const handleDeleteMapping = (toothNumber) => {
     setMappings(mappings.filter(m => m.toothNumber !== toothNumber));
-    setMarkerNodes(markerNodes.filter(n => n.toothNumber !== toothNumber));
   };
 
   const handleApprove = async () => {
     setSaving(true);
     setError('');
 
+    const activeNodes = [];
+    mappings.forEach(m => {
+      try {
+        const coords = JSON.parse(m.coordinatesJson);
+        if (Array.isArray(coords)) {
+          coords.forEach(pt => {
+            activeNodes.push({ toothNumber: m.toothNumber, x: pt.x, y: pt.y });
+          });
+        }
+      } catch (e) {}
+    });
+
     const payload = {
       approvedPercentage: parseFloat(coveragePercentage),
-      approvedRegions: JSON.stringify(markerNodes),
+      approvedRegions: JSON.stringify(activeNodes),
       mappings: mappings.map(m => ({
         toothNumber: m.toothNumber,
         plaqueLevel: m.plaqueLevel,
@@ -318,7 +437,7 @@ const PlaqueValidation = () => {
                   style={{ 
                     width: '100%', 
                     height: '100%', 
-                    objectFit: 'contain',
+                    objectFit: 'fill',
                     borderRadius: '16px',
                     backgroundColor: '#cbd5e1',
                     position: 'absolute',
@@ -355,8 +474,120 @@ const PlaqueValidation = () => {
                 height={400}
                 onClick={handleCanvasClick}
                 className="plaque-overlay-canvas"
-                style={{ width: '100%', height: '100%' }}
+                style={{ width: '100%', height: '100%', cursor: 'crosshair' }}
               />
+
+              {/* Floating Inline Hotspot Annotation popover tooltip */}
+              {activeTooltip && (
+                <div 
+                  className="plaque-editor-tooltip shadow-lg border"
+                  style={{
+                    position: 'absolute',
+                    left: `${activeTooltip.displayX}px`,
+                    top: `${activeTooltip.displayY}px`,
+                    transform: 'translate(-50%, -100%) translateY(-15px)',
+                    background: 'rgba(15, 23, 42, 0.94)',
+                    backdropFilter: 'blur(12px)',
+                    borderColor: 'rgba(255, 255, 255, 0.15)',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    zIndex: 1000,
+                    width: '210px',
+                    color: '#f8fafc'
+                  }}
+                >
+                  <div className="d-flex align-items-center justify-content-between mb-2 pb-1 border-bottom border-secondary">
+                    <span className="small font-weight-bold" style={{ letterSpacing: '0.5px' }}>
+                      {activeTooltip.isEdit ? 'Modify Plaque Spot' : 'Annotate Spot'}
+                    </span>
+                    <button 
+                      onClick={() => setActiveTooltip(null)} 
+                      style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '13px', cursor: 'pointer', outline: 'none' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  
+                  <div className="mb-2">
+                    <label className="text-muted mb-1" style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>Tooth Number</label>
+                    <select 
+                      value={activeTooltip.toothNumber}
+                      onChange={(e) => setActiveTooltip({ ...activeTooltip, toothNumber: parseInt(e.target.value) })}
+                      className="form-select form-select-sm"
+                      style={{ background: '#1e293b', border: '1px solid #475569', color: '#f8fafc', fontSize: '11px', borderRadius: '6px' }}
+                    >
+                      {fdiTeeth.map(num => (
+                        <option key={num} value={num}>Tooth #{num}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="mb-2">
+                    <label className="text-muted mb-1" style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>Plaque Level</label>
+                    <select 
+                      value={activeTooltip.plaqueLevel}
+                      onChange={(e) => setActiveTooltip({ ...activeTooltip, plaqueLevel: e.target.value })}
+                      className="form-select form-select-sm"
+                      style={{ background: '#1e293b', border: '1px solid #475569', color: '#f8fafc', fontSize: '11px', borderRadius: '6px' }}
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                    </select>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="text-muted mb-1" style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>Tooth Region</label>
+                    <select 
+                      value={activeTooltip.gumlineRegion}
+                      onChange={(e) => setActiveTooltip({ ...activeTooltip, gumlineRegion: e.target.value })}
+                      className="form-select form-select-sm"
+                      style={{ background: '#1e293b', border: '1px solid #475569', color: '#f8fafc', fontSize: '11px', borderRadius: '6px' }}
+                    >
+                      <option value="Cervical">Cervical</option>
+                      <option value="Middle">Middle</option>
+                      <option value="Incisal">Incisal</option>
+                      <option value="Interproximal">Interproximal</option>
+                      <option value="Margin">Margin</option>
+                    </select>
+                  </div>
+
+                  <div className="d-flex gap-2">
+                    {activeTooltip.isEdit && (
+                      <button 
+                        onClick={handleDeleteTooltipNode}
+                        className="btn btn-sm btn-danger py-1"
+                        style={{ flex: 1, fontSize: '11px', fontWeight: 'bold', borderRadius: '6px' }}
+                      >
+                        Delete
+                      </button>
+                    )}
+                    <button 
+                      onClick={handleSaveTooltipNode}
+                      className="btn btn-sm btn-success py-1"
+                      style={{ flex: 2, fontSize: '11px', fontWeight: 'bold', borderRadius: '6px' }}
+                    >
+                      {activeTooltip.isEdit ? 'Save Node' : 'Confirm'}
+                    </button>
+                  </div>
+
+                  {/* Downward triangle arrow pointing to coordinates click */}
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      bottom: '-7px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: 0,
+                      height: 0,
+                      borderLeft: '7px solid transparent',
+                      borderRight: '7px solid transparent',
+                      borderTop: '7px solid rgba(15, 23, 42, 0.94)',
+                      pointerEvents: 'none'
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -412,6 +643,8 @@ const PlaqueValidation = () => {
                             onChange={(e) => handleMappingFieldChange(m.toothNumber, "gumlineRegion", e.target.value)}
                           >
                             <option value="Cervical">Cervical</option>
+                            <option value="Middle">Middle</option>
+                            <option value="Incisal">Incisal</option>
                             <option value="Interproximal">Interproximal</option>
                             <option value="Margin">Margin</option>
                           </select>

@@ -242,7 +242,6 @@ h1, h2, h3, h4, h5, h6 {
   position: relative;
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-lg);
-  overflow: hidden;
   background-color: #F8FAFC;
   display: flex;
   align-items: center;
