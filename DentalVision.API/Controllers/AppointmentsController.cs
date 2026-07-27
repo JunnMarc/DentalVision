@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using DentalVision.Application.DTOs;
 using DentalVision.Application.Interfaces;
+using DentalVision.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -49,9 +50,26 @@ namespace DentalVision.API.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var appointment = await _appointmentService.UpdateStatusAsync(id, request);
-            if (appointment == null) return NotFound(new { message = "Appointment not found" });
+            var existingAppt = await _appointmentService.GetByIdAsync(id);
+            if (existingAppt == null) return NotFound(new { message = "Appointment not found" });
 
+            if (request.Status == AppointmentStatus.Completed)
+            {
+                var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdStr) || !int.TryParse(userIdStr, out int loggedInUserId))
+                {
+                    return Unauthorized(new { message = "Invalid authentication claims" });
+                }
+
+                var isDentist = User.IsInRole("Dentist") || User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value == "Dentist";
+
+                if (!isDentist || existingAppt.DentistId != loggedInUserId)
+                {
+                    return StatusCode(403, new { message = "You do not have permission to mark this appointment as completed." });
+                }
+            }
+
+            var appointment = await _appointmentService.UpdateStatusAsync(id, request);
             return Ok(appointment);
         }
     }

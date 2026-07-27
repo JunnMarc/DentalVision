@@ -10,7 +10,7 @@ const AppointmentCalendar = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const { hasRole } = useAuth();
+  const { hasRole, user } = useAuth();
   
   const { register, handleSubmit, reset } = useForm();
 
@@ -177,7 +177,7 @@ const AppointmentCalendar = () => {
                         </div>
                       )}
                       
-                      {appt.status === 0 && (
+                      {appt.status === 0 && hasRole(['Dentist']) && user?.id === appt.dentistId && (
                         <button 
                           onClick={() => handleUpdateStatus(appt.id, 1)} // Mark completed
                           className="btn btn-sm btn-outline-success py-1 d-flex align-items-center gap-1"
