@@ -24,6 +24,53 @@ const MyProfile = () => {
   const [appointments, setAppointments] = useState([]);
   const [invoices, setInvoices] = useState([]);
 
+  // Appointment Booking form states
+  const [showBookModal, setShowBookModal] = useState(false);
+  const [bookingFormData, setBookingFormData] = useState({
+    dentistId: '2',
+    apptDate: '',
+    apptTime: '',
+    apptReason: ''
+  });
+
+  const handleBookingInputChange = (e) => {
+    const { name, value } = e.target;
+    setBookingFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleBookAppointmentSubmit = async (e) => {
+    e.preventDefault();
+    if (!profile) {
+      alert("Please complete your patient profile details first!");
+      return;
+    }
+    try {
+      const payload = {
+        patientId: profile.id,
+        dentistId: parseInt(bookingFormData.dentistId),
+        appointmentDate: `${bookingFormData.apptDate}T${bookingFormData.apptTime}:00`,
+        reason: bookingFormData.apptReason || 'Routine checkup',
+        notes: 'Booked via Patient Portal',
+        status: 4 // Requested (AppointmentStatus.Requested)
+      };
+
+      await api.post('/appointments', payload);
+      alert("Appointment request submitted successfully! It is now pending dental staff confirmation.");
+      setShowBookModal(false);
+      // Reset form
+      setBookingFormData({
+        dentistId: '2',
+        apptDate: '',
+        apptTime: '',
+        apptReason: ''
+      });
+      fetchProfile(); // Refresh list
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit appointment request. Please verify inputs.");
+    }
+  };
+
   const fetchProfile = async () => {
     try {
       setLoading(true);
@@ -353,20 +400,109 @@ const MyProfile = () => {
         <div className="col-md-7">
           {/* Appointments list */}
           <div className="card shadow-sm border-0 mb-4 p-4" style={{ borderRadius: '16px' }}>
-            <h5 className="font-weight-bold text-dark mb-3 d-flex align-items-center">
-              <FaCalendarAlt size={18} className="text-primary me-2" /> My Appointments
-            </h5>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h5 className="font-weight-bold text-dark mb-0 d-flex align-items-center">
+                <FaCalendarAlt size={18} className="text-primary me-2" /> My Appointments
+              </h5>
+              <button 
+                onClick={() => setShowBookModal(true)} 
+                className="btn btn-sm btn-primary px-3 rounded-pill"
+              >
+                Book Appointment
+              </button>
+            </div>
+
+            {/* Inline Booking Form Card */}
+            {showBookModal && (
+              <div className="card p-3 mb-3 border-primary-subtle bg-light shadow-sm text-start" style={{ borderLeft: '4px solid #2563EB' }}>
+                <div className="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                  <h6 className="font-weight-bold m-0 text-primary">Schedule New Appointment</h6>
+                  <button 
+                    onClick={() => setShowBookModal(false)} 
+                    className="btn-close" 
+                    style={{ fontSize: '10px' }}
+                  ></button>
+                </div>
+                <form onSubmit={handleBookAppointmentSubmit}>
+                  <div className="row g-2">
+                    <div className="col-12">
+                      <label className="form-label xsmall font-weight-bold">Select Dentist</label>
+                      <select 
+                        name="dentistId" 
+                        value={bookingFormData.dentistId} 
+                        onChange={handleBookingInputChange} 
+                        className="form-select form-select-sm"
+                        required
+                      >
+                        <option value="2">Dr. John Smith (Orthodontics)</option>
+                        <option value="3">Dr. Sarah Connor (Periodontics)</option>
+                      </select>
+                    </div>
+                    <div className="col-6">
+                      <label className="form-label xsmall font-weight-bold">Preferred Date</label>
+                      <input 
+                        type="date" 
+                        name="apptDate" 
+                        value={bookingFormData.apptDate} 
+                        onChange={handleBookingInputChange} 
+                        className="form-control form-control-sm" 
+                        required 
+                      />
+                    </div>
+                    <div className="col-6">
+                      <label className="form-label xsmall font-weight-bold">Preferred Time</label>
+                      <input 
+                        type="time" 
+                        name="apptTime" 
+                        value={bookingFormData.apptTime} 
+                        onChange={handleBookingInputChange} 
+                        className="form-control form-control-sm" 
+                        required 
+                      />
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label xsmall font-weight-bold">Reason for Visit</label>
+                      <input 
+                        type="text" 
+                        name="apptReason" 
+                        value={bookingFormData.apptReason} 
+                        onChange={handleBookingInputChange} 
+                        placeholder="e.g. Gum bleeding, Plaque check-up" 
+                        className="form-control form-control-sm" 
+                        required 
+                      />
+                    </div>
+                    <div className="col-12 text-end mt-3">
+                      <button 
+                        type="button" 
+                        onClick={() => setShowBookModal(false)} 
+                        className="btn btn-sm btn-outline-secondary me-2 px-3"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="submit" 
+                        className="btn btn-sm btn-primary px-3 text-white"
+                      >
+                        Request Booking
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            )}
+
             {appointments.length === 0 ? (
               <div className="text-center py-4 bg-light rounded text-muted small">
                 No appointment history found.
               </div>
             ) : (
               <div className="table-responsive">
-                <table className="table table-hover align-middle mb-0" style={{ fontSize: '13px' }}>
+                <table className="table table-hover align-middle mb-0 text-start" style={{ fontSize: '13px' }}>
                   <thead className="table-light">
                     <tr>
                       <th>Date & Time</th>
-                      <th>Purpose</th>
+                      <th>Reason</th>
                       <th>Status</th>
                     </tr>
                   </thead>
@@ -377,12 +513,21 @@ const MyProfile = () => {
                           {new Date(appt.appointmentDate).toLocaleDateString()} at{' '}
                           {new Date(appt.appointmentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </td>
-                        <td>{appt.purpose}</td>
+                        <td>{appt.reason || 'Routine Checkup'}</td>
                         <td>
                           <span className={`badge px-2 py-1 rounded ${
-                            appt.status === 'Completed' ? 'bg-success-subtle text-success' : 'bg-primary-subtle text-primary'
+                            appt.status === 1 ? 'bg-success text-white' :
+                            appt.status === 0 ? 'bg-primary text-white' :
+                            appt.status === 4 ? 'bg-warning text-dark' : 'bg-danger text-white'
                           }`}>
-                            {appt.status}
+                            {
+                              appt.status === 0 ? 'Scheduled' :
+                              appt.status === 1 ? 'Completed' :
+                              appt.status === 2 ? 'Cancelled' :
+                              appt.status === 3 ? 'No Show' :
+                              appt.status === 4 ? 'Pending Confirmation' :
+                              appt.status
+                            }
                           </span>
                         </td>
                       </tr>

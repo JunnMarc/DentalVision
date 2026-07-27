@@ -5,6 +5,7 @@ namespace DentalVision.Domain.Enums
         Scheduled,
         Completed,
         Cancelled,
-        NoShow
+        NoShow,
+        Requested
     }
 }

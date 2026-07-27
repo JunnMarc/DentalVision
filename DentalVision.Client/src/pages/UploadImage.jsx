@@ -15,6 +15,7 @@ const UploadImage = () => {
   const [contrast, setContrast] = useState(1.0);
   const [denoise, setDenoise] = useState(3);
   const [uploading, setUploading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0); // Ticker steps for clinical feedback
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
@@ -51,6 +52,11 @@ const UploadImage = () => {
 
     setError('');
     setUploading(true);
+    setLoadingStep(0);
+
+    const interval = setInterval(() => {
+      setLoadingStep(prev => Math.min(3, prev + 1));
+    }, 1500);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -73,9 +79,95 @@ const UploadImage = () => {
       console.error("Upload failed:", error);
       setError(error.response?.data?.message || "An error occurred during file upload.");
     } finally {
+      clearInterval(interval);
       setUploading(false);
     }
   };
+
+  if (uploading) {
+    return (
+      <div style={{ maxWidth: '600px', margin: '40px auto' }}>
+        <div className="clinic-card text-center p-5 bg-white shadow-lg" style={{ borderRadius: '16px', borderTop: '5px solid #0EA5E9' }}>
+          <div className="mb-4">
+            <div className="spinner-border text-primary" style={{ width: '4rem', height: '4rem', borderWidth: '0.4rem' }} role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          </div>
+          
+          <h4 className="font-weight-bold mb-3" style={{ color: '#0F172A', fontFamily: 'Outfit, sans-serif' }}>
+            Scanning....
+          </h4>
+          
+          <p className="text-secondary small mb-4">
+            Our neural networks are processing your dental photo to isolate plaque boundaries and map tooth locations.
+          </p>
+
+          <div className="p-3 bg-light rounded text-start border" style={{ minHeight: '140px' }}>
+            <h6 className="xsmall text-muted font-weight-bold mb-3 uppercase" style={{ letterSpacing: '0.5px', fontSize: '9px' }}>
+              Execution Log
+            </h6>
+            
+            <div className="d-flex flex-column gap-2" style={{ fontSize: '13px' }}>
+              <div className="d-flex align-items-center gap-2">
+                <span className="text-success font-weight-bold">✓</span>
+                <span className="text-secondary">Image upload completed successfully.</span>
+              </div>
+
+              {loadingStep >= 1 ? (
+                <div className="d-flex align-items-center gap-2">
+                  <span className={loadingStep === 1 ? "spinner-border spinner-border-sm text-primary" : "text-success font-weight-bold"}>
+                    {loadingStep > 1 && "✓"}
+                  </span>
+                  <span className={loadingStep === 1 ? "font-weight-bold text-dark" : "text-secondary"}>
+                    Querying Roboflow Cloud Inference Engine...
+                  </span>
+                </div>
+              ) : (
+                <div className="d-flex align-items-center gap-2 text-muted" style={{ color: '#94a3b8' }}>
+                  <span style={{ width: '12px' }}>•</span>
+                  <span>Querying Roboflow Cloud Inference Engine...</span>
+                </div>
+              )}
+
+              {loadingStep >= 2 ? (
+                <div className="d-flex align-items-center gap-2">
+                  <span className={loadingStep === 2 ? "spinner-border spinner-border-sm text-primary" : "text-success font-weight-bold"}>
+                    {loadingStep > 2 && "✓"}
+                  </span>
+                  <span className={loadingStep === 2 ? "font-weight-bold text-dark" : "text-secondary"}>
+                    Applying Solidity boundary shape-smoothing ($S &lt; 0.8$)...
+                  </span>
+                </div>
+              ) : (
+                <div className="d-flex align-items-center gap-2 text-muted" style={{ color: '#94a3b8' }}>
+                  <span style={{ width: '12px' }}>•</span>
+                  <span>Applying Solidity boundary shape-smoothing ($S &lt; 0.8$)...</span>
+                </div>
+              )}
+
+              {loadingStep >= 3 ? (
+                <div className="d-flex align-items-center gap-2">
+                  <span className="spinner-border spinner-border-sm text-primary"></span>
+                  <span className="font-weight-bold text-dark">
+                    Mapping anatomical regions (Cervical/Incisal)...
+                  </span>
+                </div>
+              ) : (
+                <div className="d-flex align-items-center gap-2 text-muted" style={{ color: '#94a3b8' }}>
+                  <span style={{ width: '12px' }}>•</span>
+                  <span>Mapping anatomical regions (Cervical/Incisal)...</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 text-muted xsmall">
+            Please do not refresh the browser or click away.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto' }}>

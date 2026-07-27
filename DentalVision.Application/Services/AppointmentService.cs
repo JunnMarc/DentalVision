@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using AutoMapper;
 using DentalVision.Application.DTOs;
 using DentalVision.Application.Interfaces;
@@ -24,13 +25,20 @@ namespace DentalVision.Application.Services
 
         public async Task<AppointmentDto?> GetByIdAsync(int id)
         {
-            var appointment = _unitOfWork.Appointments.Find(a => a.Id == id).FirstOrDefault();
+            var appointment = _unitOfWork.Appointments.Find(a => a.Id == id)
+                .Include(a => a.Patient)
+                .Include(a => a.Dentist)
+                .ThenInclude(d => d.User)
+                .FirstOrDefault();
             return _mapper.Map<AppointmentDto>(appointment);
         }
 
         public async Task<IEnumerable<AppointmentDto>> GetAllAsync(DateTime? date = null)
         {
-            IQueryable<Appointment> query = _unitOfWork.Appointments.Find(a => true);
+            IQueryable<Appointment> query = _unitOfWork.Appointments.Find(a => true)
+                .Include(a => a.Patient)
+                .Include(a => a.Dentist)
+                .ThenInclude(d => d.User);
 
             if (date.HasValue)
             {
@@ -46,19 +54,27 @@ namespace DentalVision.Application.Services
         public async Task<AppointmentDto> CreateAsync(CreateAppointmentDto request)
         {
             var appointment = _mapper.Map<Appointment>(request);
-            appointment.Status = AppointmentStatus.Scheduled;
+            appointment.Status = request.Status ?? AppointmentStatus.Scheduled;
 
             await _unitOfWork.Appointments.AddAsync(appointment);
             await _unitOfWork.CompleteAsync();
 
             // Reload to fetch patient and dentist names
-            var created = _unitOfWork.Appointments.Find(a => a.Id == appointment.Id).First();
+            var created = _unitOfWork.Appointments.Find(a => a.Id == appointment.Id)
+                .Include(a => a.Patient)
+                .Include(a => a.Dentist)
+                .ThenInclude(d => d.User)
+                .First();
             return _mapper.Map<AppointmentDto>(created);
         }
 
         public async Task<AppointmentDto?> UpdateStatusAsync(int id, UpdateAppointmentStatusDto request)
         {
-            var appointment = _unitOfWork.Appointments.Find(a => a.Id == id).FirstOrDefault();
+            var appointment = _unitOfWork.Appointments.Find(a => a.Id == id)
+                .Include(a => a.Patient)
+                .Include(a => a.Dentist)
+                .ThenInclude(d => d.User)
+                .FirstOrDefault();
             if (appointment == null) return null;
 
             appointment.Status = request.Status;

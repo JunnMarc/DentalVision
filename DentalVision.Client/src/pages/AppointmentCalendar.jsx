@@ -143,9 +143,39 @@ const AppointmentCalendar = () => {
                     </div>
                     
                     <div className="d-flex align-items-center gap-2">
-                      <span className={`badge px-2 py-1 ${appt.status === 0 ? 'bg-primary' : appt.status === 1 ? 'bg-success' : 'bg-danger'}`}>
-                        {appt.status === 0 ? 'Scheduled' : appt.status === 1 ? 'Completed' : appt.status === 2 ? 'Cancelled' : 'No Show'}
+                      <span className={`badge px-2 py-1 ${
+                        appt.status === 0 ? 'bg-primary' : 
+                        appt.status === 1 ? 'bg-success' : 
+                        appt.status === 4 ? 'bg-warning text-dark' : 
+                        'bg-danger'
+                      }`}>
+                        {
+                          appt.status === 0 ? 'Scheduled' : 
+                          appt.status === 1 ? 'Completed' : 
+                          appt.status === 2 ? 'Cancelled' : 
+                          appt.status === 3 ? 'No Show' : 
+                          'Requested / Pending'
+                        }
                       </span>
+                      
+                      {appt.status === 4 && (
+                        <div className="d-flex gap-1">
+                          <button 
+                            onClick={() => handleUpdateStatus(appt.id, 0)} // Approve: Scheduled
+                            className="btn btn-sm btn-success py-1"
+                            style={{ fontSize: 10, fontWeight: 'bold' }}
+                          >
+                            Approve
+                          </button>
+                          <button 
+                            onClick={() => handleUpdateStatus(appt.id, 2)} // Reject: Cancelled
+                            className="btn btn-sm btn-outline-danger py-1"
+                            style={{ fontSize: 10 }}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
                       
                       {appt.status === 0 && (
                         <button 

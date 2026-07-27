@@ -35,7 +35,7 @@ namespace DentalVision.API.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Receptionist,Administrator")]
+        [Authorize(Roles = "Receptionist,Administrator,Patient,Dentist")]
         public async Task<IActionResult> Create([FromBody] CreateAppointmentDto request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);

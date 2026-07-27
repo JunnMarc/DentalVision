@@ -89,7 +89,6 @@ const Home = () => {
                 textTransform: 'uppercase',
                 letterSpacing: '1px'
               }}>
-                ✦ AI-Powered Dental Diagnostics
               </span> */}
               
               <h1 className="display-4 font-weight-bold mb-4" style={{ lineHeight: '1.15', fontWeight: 800, color: '#0f172a' }}>
@@ -139,7 +138,7 @@ const Home = () => {
               </div>
 
               {/* Technical Stack Meta info */}
-              <div className="mt-5 d-flex gap-4 align-items-center">
+              {/* <div className="mt-5 d-flex gap-4 align-items-center">
                 <div className="border-end pe-4 border-light-subtle">
                   <div className="h4 font-weight-bold mb-0 text-dark" style={{ color: '#0f172a' }}>Roboflow</div>
                   <div className="xsmall text-muted">Cloud Inference Engine</div>
@@ -152,8 +151,8 @@ const Home = () => {
                   <div className="h4 font-weight-bold mb-0 text-dark" style={{ color: '#0f172a' }}>QuestPDF</div>
                   <div className="xsmall text-muted">Clinical Exporter</div>
                 </div>
-              </div>
-            </div>
+              </div>*/}
+            </div> 
 
             <div className="col-lg-6">
               <div className="position-relative" style={{
@@ -352,7 +351,7 @@ const Home = () => {
                 </div>
                 <h5 className="font-weight-bold mb-2 text-dark" style={{ color: '#0f172a' }}>Hybrid Inference Pipeline</h5>
                 <p className="text-secondary small mb-0">
-                  Integrates Roboflow Cloud services for high-fidelity clinical detections, with a local YOLOv8-seg Python fallback model to guarantee uninterrupted off-grid performance.
+                  Integrates with OpenCV for high-fidelity clinical detections to guarantee uninterrupted off-grid performance.
                 </p>
               </div>
             </div>

@@ -24,6 +24,7 @@ namespace DentalVision.Application.DTOs
         public DateTime AppointmentDate { get; set; }
         public string? Reason { get; set; }
         public string? Notes { get; set; }
+        public AppointmentStatus? Status { get; set; }
     }
 
     public class UpdateAppointmentStatusDto
