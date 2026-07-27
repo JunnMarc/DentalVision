@@ -22,6 +22,20 @@ const ReportDetails = () => {
     fetchReport();
   }, [id]);
 
+  const handleExportPDF = async (reportId) => {
+    try {
+      const response = await api.get(`/reports/${reportId}/export`, {
+        responseType: 'blob'
+      });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const fileURL = URL.createObjectURL(blob);
+      window.open(fileURL, '_blank');
+    } catch (err) {
+      console.error("Failed to export clinical report PDF:", err);
+      alert("Error generating PDF. Please ensure you are logged in.");
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-5"><div className="spinner-border text-primary" role="status"></div></div>;
   }
@@ -40,14 +54,12 @@ const ReportDetails = () => {
           <button onClick={() => window.print()} className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
             <FaPrint /> Print
           </button>
-          <a 
-            href={`http://localhost:5098/api/reports/${id}/export`} 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <button 
+            onClick={() => handleExportPDF(report.id)} 
             className="btn btn-sm btn-danger d-flex align-items-center gap-1"
           >
             <FaFilePdf /> Export PDF
-          </a>
+          </button>
         </div>
       </div>
 

@@ -30,19 +30,34 @@ namespace DentalVision.Application.Services
 
         public async Task<ClinicalReportDto?> GetReportByIdAsync(int id)
         {
-            var report = _unitOfWork.ClinicalReports.Find(r => r.Id == id).FirstOrDefault();
+            var report = _unitOfWork.ClinicalReports.Find(r => r.Id == id)
+                .Include(r => r.Patient)
+                .Include(r => r.PlaqueAnalysis)
+                .Include(r => r.Dentist)
+                .ThenInclude(d => d.User)
+                .FirstOrDefault();
             return _mapper.Map<ClinicalReportDto>(report);
         }
 
         public async Task<ClinicalReportDto?> GetReportByAnalysisIdAsync(int analysisId)
         {
-            var report = _unitOfWork.ClinicalReports.Find(r => r.AnalysisId == analysisId).FirstOrDefault();
+            var report = _unitOfWork.ClinicalReports.Find(r => r.AnalysisId == analysisId)
+                .Include(r => r.Patient)
+                .Include(r => r.PlaqueAnalysis)
+                .Include(r => r.Dentist)
+                .ThenInclude(d => d.User)
+                .FirstOrDefault();
             return _mapper.Map<ClinicalReportDto>(report);
         }
 
         public async Task<IEnumerable<ClinicalReportDto>> GetReportsByPatientIdAsync(int patientId)
         {
-            var reports = _unitOfWork.ClinicalReports.Find(r => r.PatientId == patientId).ToList();
+            var reports = _unitOfWork.ClinicalReports.Find(r => r.PatientId == patientId)
+                .Include(r => r.Patient)
+                .Include(r => r.PlaqueAnalysis)
+                .Include(r => r.Dentist)
+                .ThenInclude(d => d.User)
+                .ToList();
             return _mapper.Map<IEnumerable<ClinicalReportDto>>(reports);
         }
 
@@ -60,7 +75,12 @@ namespace DentalVision.Application.Services
                 throw new Exception("Dental image not found");
             }
 
-            var existingReport = _unitOfWork.ClinicalReports.Find(r => r.AnalysisId == request.AnalysisId).FirstOrDefault();
+            var existingReport = _unitOfWork.ClinicalReports.Find(r => r.AnalysisId == request.AnalysisId)
+                .Include(r => r.Patient)
+                .Include(r => r.PlaqueAnalysis)
+                .Include(r => r.Dentist)
+                .ThenInclude(d => d.User)
+                .FirstOrDefault();
             if (existingReport != null)
             {
                 // Update existing
@@ -88,7 +108,12 @@ namespace DentalVision.Application.Services
             await _unitOfWork.ClinicalReports.AddAsync(report);
             await _unitOfWork.CompleteAsync();
 
-            var created = _unitOfWork.ClinicalReports.Find(r => r.Id == report.Id).First();
+            var created = _unitOfWork.ClinicalReports.Find(r => r.Id == report.Id)
+                .Include(r => r.Patient)
+                .Include(r => r.PlaqueAnalysis)
+                .Include(r => r.Dentist)
+                .ThenInclude(d => d.User)
+                .First();
             return _mapper.Map<ClinicalReportDto>(created);
         }
 

@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import AppLayout from '../layouts/AppLayout';
 
 import Login from '../pages/Login';
+import Home from '../pages/Home';
 import Dashboard from '../pages/Dashboard';
 import PatientList from '../pages/PatientList';
 import PatientProfile from '../pages/PatientProfile';
@@ -40,6 +41,7 @@ const AppRoutes = () => {
   return (
     <Routes>
       {/* Public Route */}
+      <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
 
       {/* Private Routes */}
