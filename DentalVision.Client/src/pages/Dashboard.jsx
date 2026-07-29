@@ -97,7 +97,7 @@ const Dashboard = () => {
         <div className="row g-4 mb-4">
           <div className="col-md-3">
             <div className="clinic-card stat-card d-flex align-items-center">
-              <div className="stat-icon-wrapper text-primary bg-light me-3">
+              <div className="stat-icon-wrapper me-3">
                 <FaUserFriends />
               </div>
               <div>
@@ -108,7 +108,7 @@ const Dashboard = () => {
           </div>
           <div className="col-md-3">
             <div className="clinic-card stat-card teal d-flex align-items-center">
-              <div className="stat-icon-wrapper text-info bg-light me-3" style={{ color: '#14B8A6' }}>
+              <div className="stat-icon-wrapper me-3">
                 <FaCalendarCheck />
               </div>
               <div>
@@ -119,8 +119,8 @@ const Dashboard = () => {
           </div>
           <div className="col-md-3">
             <div className="clinic-card stat-card green d-flex align-items-center">
-              <div className="stat-icon-wrapper text-success bg-light me-3">
-                <span className="text-success font-weight-bold" style={{ fontSize: 18 }}>₱</span>
+              <div className="stat-icon-wrapper me-3">
+                <span className="font-weight-bold" style={{ fontSize: 18 }}>₱</span>
               </div>
               <div>
                 <h6 className="text-muted small mb-1 text-start">Monthly Revenue</h6>
@@ -130,7 +130,7 @@ const Dashboard = () => {
           </div>
           <div className="col-md-3">
             <div className="clinic-card stat-card red d-flex align-items-center">
-              <div className="stat-icon-wrapper text-danger bg-light me-3">
+              <div className="stat-icon-wrapper me-3">
                 <FaClipboardList />
               </div>
               <div>
@@ -170,7 +170,7 @@ const Dashboard = () => {
         <div className="row g-4 mb-4">
           <div className="col-md-4">
             <div className="clinic-card stat-card d-flex align-items-center">
-              <div className="stat-icon-wrapper text-primary bg-light me-3">
+              <div className="stat-icon-wrapper me-3">
                 <FaUserFriends />
               </div>
               <div>
@@ -181,7 +181,7 @@ const Dashboard = () => {
           </div>
           <div className="col-md-4">
             <div className="clinic-card stat-card red d-flex align-items-center">
-              <div className="stat-icon-wrapper text-danger bg-light me-3">
+              <div className="stat-icon-wrapper me-3">
                 <FaExclamationCircle />
               </div>
               <div>
@@ -192,7 +192,7 @@ const Dashboard = () => {
           </div>
           <div className="col-md-4">
             <div className="clinic-card stat-card green d-flex align-items-center">
-              <div className="stat-icon-wrapper text-success bg-light me-3">
+              <div className="stat-icon-wrapper me-3">
                 <FaClipboardList />
               </div>
               <div>
@@ -295,7 +295,7 @@ const Dashboard = () => {
         <div className="row g-4 mb-4">
           <div className="col-md-4">
             <div className="clinic-card stat-card d-flex align-items-center">
-              <div className="stat-icon-wrapper text-primary bg-light me-3">
+              <div className="stat-icon-wrapper me-3">
                 <FaCalendarCheck />
               </div>
               <div>
@@ -306,7 +306,7 @@ const Dashboard = () => {
           </div>
           <div className="col-md-4">
             <div className="clinic-card stat-card red d-flex align-items-center">
-              <div className="stat-icon-wrapper text-danger bg-light me-3">
+              <div className="stat-icon-wrapper me-3">
                 <FaClipboardList />
               </div>
               <div>
@@ -317,8 +317,8 @@ const Dashboard = () => {
           </div>
           <div className="col-md-4">
             <div className="clinic-card stat-card green d-flex align-items-center">
-              <div className="stat-icon-wrapper text-success bg-light me-3">
-                <span className="text-success font-weight-bold" style={{ fontSize: 18 }}>₱</span>
+              <div className="stat-icon-wrapper me-3">
+                <span className="font-weight-bold" style={{ fontSize: 18 }}>₱</span>
               </div>
               <div>
                 <h6 className="text-muted small mb-1 text-start">Total Outstanding</h6>
