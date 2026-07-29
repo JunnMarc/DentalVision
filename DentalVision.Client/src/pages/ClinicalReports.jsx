@@ -96,10 +96,13 @@ const ClinicalReports = () => {
                     <td>{r.patientName}</td>
                     <td>{r.dentistName}</td>
                     <td>{new Date(r.reportDate).toLocaleDateString()}</td>
-                    <td><span className="badge bg-danger">{r.coveragePercentage}%</span></td>
+                    <td><span className="font-weight-bold text-danger">{r.coveragePercentage}%</span></td>
                     <td>
-                      <span className={`badge ${r.approvalStatus === 'Approved' ? 'bg-success' : 'bg-secondary'}`}>
-                        {r.approvalStatus}
+                      <span className="font-weight-bold" style={{ 
+                        color: r.approvalStatus === 'Approved' ? '#059669' : '#475569',
+                        fontSize: '13px'
+                      }}>
+                        ● {r.approvalStatus}
                       </span>
                     </td>
                     <td>

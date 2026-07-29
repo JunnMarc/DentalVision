@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useForm } from 'react-hook-form';
 import { 
   FaUser, 
   FaFolderOpen, 
@@ -24,6 +25,9 @@ const PatientProfile = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('records');
   const [exportingId, setExportingId] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const { register, handleSubmit, reset, setValue } = useForm();
 
   const handleExportPDF = async (reportId) => {
     try {
@@ -42,44 +46,60 @@ const PatientProfile = () => {
     }
   };
 
+  const fetchPatientData = async () => {
+    try {
+      const patientRes = await api.get(`/patients/${id}`);
+      setPatient(patientRes.data);
+
+      // Populate edit form defaults
+      setValue("firstName", patientRes.data.firstName);
+      setValue("lastName", patientRes.data.lastName);
+      setValue("dateOfBirth", patientRes.data.dateOfBirth ? patientRes.data.dateOfBirth.split('T')[0] : '2000-01-01');
+      setValue("gender", patientRes.data.gender || 'Male');
+      setValue("phone", patientRes.data.phone || '');
+      setValue("email", patientRes.data.email || '');
+      setValue("address", patientRes.data.address || '');
+      setValue("medicalHistory", patientRes.data.medicalHistory || '');
+
+      // Fetch reports
+      const reportsRes = await api.get(`/reports/patient/${id}`);
+      setReports(reportsRes.data);
+
+      // Fetch invoices
+      const invoicesRes = await api.get(`/billing/invoices/patient/${id}`);
+      setInvoices(invoicesRes.data);
+
+      const reportsData = reportsRes.data;
+      const imagesList = reportsData.map((rep, idx) => ({
+        id: rep.analysisId,
+        filePath: `/uploads/dental_plaque_disclosed_${idx + 1}.png`,
+        uploadedAt: rep.reportDate,
+        notes: "Disclosing dye evaluation.",
+        coveragePercentage: rep.coveragePercentage
+      }));
+      setImages(imagesList);
+
+    } catch (error) {
+      console.error("Error loading patient profile datasets:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchPatientData = async () => {
-      try {
-        const patientRes = await api.get(`/patients/${id}`);
-        setPatient(patientRes.data);
-
-        // Fetch reports
-        const reportsRes = await api.get(`/reports/patient/${id}`);
-        setReports(reportsRes.data);
-
-        // Fetch invoices
-        const invoicesRes = await api.get(`/billing/invoices/patient/${id}`);
-        setInvoices(invoicesRes.data);
-
-        // Fetch images (we can use patient details association if returned, 
-        // or a simulated list derived from reports since each report has an analysis/image link)
-        // Let's seed mock images list since backend DentalImages endpoint is filterable by Patient.
-        // Actually, we can fetch images from API, but wait! We did not write a GET /api/images/patient/{id} endpoint!
-        // We can easily simulate or pull them from the reports which contain analysisId and coverage.
-        // Let's create a list of images based on reports for a seamless visual flow!
-        const reportsData = reportsRes.data;
-        const imagesList = reportsData.map((rep, idx) => ({
-          id: rep.analysisId,
-          filePath: `/uploads/dental_plaque_disclosed_${idx + 1}.png`,
-          uploadedAt: rep.reportDate,
-          notes: "Disclosing dye evaluation.",
-          coveragePercentage: rep.coveragePercentage
-        }));
-        setImages(imagesList);
-
-      } catch (error) {
-        console.error("Error loading patient profile datasets:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchPatientData();
   }, [id]);
+
+  const onEditSubmit = async (data) => {
+    try {
+      await api.put(`/patients/${id}`, data);
+      setShowEditModal(false);
+      fetchPatientData();
+    } catch (error) {
+      console.error("Failed to update patient profile:", error);
+      alert("Failed to update patient profile details.");
+    }
+  };
 
   if (loading) {
     return <div className="text-center py-5"><div className="spinner-border text-primary" role="status"></div></div>;
@@ -123,13 +143,34 @@ const PatientProfile = () => {
             <h4 className="font-weight-bold mb-1">{patient?.firstName} {patient?.lastName}</h4>
             <span className="badge bg-light text-secondary mb-3">Patient ID: #{patient?.id}</span>
 
-            <div className="text-start border-top pt-3 small">
-              <div className="mb-2"><strong>DOB:</strong> {new Date(patient?.dateOfBirth).toLocaleDateString()}</div>
-              <div className="mb-2"><strong>Gender:</strong> {patient?.gender || 'N/A'}</div>
-              <div className="mb-2"><strong>Phone:</strong> {patient?.phone}</div>
-              <div className="mb-2"><strong>Email:</strong> {patient?.email || 'N/A'}</div>
-              <div className="mb-2"><strong>Address:</strong> {patient?.address || 'N/A'}</div>
+            <div className="text-start border-top pt-3 small mb-3">
+              <div className="mb-2">
+                <strong>DOB:</strong> {
+                  patient?.dateOfBirth && 
+                  new Date(patient.dateOfBirth).getFullYear() === 2000 && 
+                  new Date(patient.dateOfBirth).getMonth() === 0 && 
+                  new Date(patient.dateOfBirth).getDate() === 1
+                    ? "Not provided yet"
+                    : patient?.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString() : 'N/A'
+                }
+              </div>
+              <div className="mb-2"><strong>Gender:</strong> {patient?.gender || 'Not provided yet'}</div>
+              <div className="mb-2">
+                <strong>Phone:</strong> {patient?.phone === '0000000000' ? 'Not provided yet' : patient?.phone}
+              </div>
+              <div className="mb-2"><strong>Email:</strong> {patient?.email || 'Not provided yet'}</div>
+              <div className="mb-2"><strong>Address:</strong> {patient?.address || 'Not provided yet'}</div>
             </div>
+
+            {hasRole(['Dentist', 'Dental Staff']) && (
+              <button 
+                className="btn btn-sm btn-outline-primary w-100 py-1"
+                onClick={() => setShowEditModal(true)}
+                style={{ fontSize: 11 }}
+              >
+                Edit Personal Info
+              </button>
+            )}
           </div>
 
           {/* Medical History */}
@@ -137,7 +178,7 @@ const PatientProfile = () => {
             <h5 className="font-weight-bold mb-3">Clinical Alert & History</h5>
             <div className="alert alert-warning p-2 small border-0 mb-0" style={{ backgroundColor: '#fffbeb', color: '#b45309' }}>
               <strong>Medical History:</strong>
-              <p className="m-0 mt-1">{patient?.medicalHistory || 'No significant historical alerts recorded.'}</p>
+              <p className="m-0 mt-1">{patient?.medicalHistory || 'No declared allergies or medical conditions yet.'}</p>
             </div>
           </div>
         </div>
@@ -230,10 +271,13 @@ const PatientProfile = () => {
                           <tr key={r.id}>
                             <td>{new Date(r.reportDate).toLocaleDateString()}</td>
                             <td>{r.dentistName}</td>
-                            <td><span className="badge bg-danger">{r.coveragePercentage}%</span></td>
+                            <td><span className="font-weight-bold text-danger">{r.coveragePercentage}%</span></td>
                             <td>
-                              <span className={`badge ${r.approvalStatus === 'Approved' ? 'bg-success' : 'bg-secondary'}`}>
-                                {r.approvalStatus}
+                              <span className="font-weight-bold" style={{ 
+                                color: r.approvalStatus === 'Approved' ? '#059669' : '#475569',
+                                fontSize: '13px'
+                                }}>
+                                ● {r.approvalStatus}
                               </span>
                             </td>
                              <td>
@@ -278,11 +322,13 @@ const PatientProfile = () => {
                             <td className="text-end">₱{inv.grandTotal?.toFixed(2)}</td>
                             <td className="text-end">₱{inv.balanceDue?.toFixed(2)}</td>
                             <td className="ps-4">
-                              <span className={`badge ${
-                                inv.paymentStatus === 'Paid' || inv.paymentStatus === 2 ? 'badge-paid' :
-                                inv.paymentStatus === 'PartiallyPaid' || inv.paymentStatus === 1 ? 'badge-partial' : 'badge-unpaid'
-                              }`}>
-                                {inv.paymentStatus === 0 ? 'Unpaid' : inv.paymentStatus === 1 ? 'PartiallyPaid' : inv.paymentStatus === 2 ? 'Paid' : inv.paymentStatus}
+                              <span className="font-weight-bold" style={{ 
+                                color: inv.paymentStatus === 'Paid' || inv.paymentStatus === 2 ? '#059669' :
+                                       inv.paymentStatus === 'PartiallyPaid' || inv.paymentStatus === 1 ? '#D97706' :
+                                       '#DC2626',
+                                fontSize: '13px'
+                              }}>
+                                ● {inv.paymentStatus === 0 ? 'Unpaid' : inv.paymentStatus === 1 ? 'Partially Paid' : inv.paymentStatus === 2 ? 'Paid' : inv.paymentStatus}
                               </span>
                             </td>
                           </tr>
@@ -552,6 +598,66 @@ const PlaqueComparisonView = ({ reports }) => {
           </div>
         </div>
       </div>
+
+      {/* Edit Patient Details Modal */}
+      {showEditModal && (
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+              <div className="modal-header bg-teal text-white border-0 py-3" style={{ backgroundColor: '#0D9488' }}>
+                <h5 className="modal-title font-weight-bold text-white">Edit Patient Record</h5>
+                <button type="button" className="btn-close btn-close-white" onClick={() => setShowEditModal(false)}></button>
+              </div>
+              <form onSubmit={handleSubmit(onEditSubmit)}>
+                <div className="modal-body p-4 text-start">
+                  <div className="row g-3">
+                    <div className="col-6">
+                      <label className="form-label small font-weight-bold">First Name</label>
+                      <input type="text" className="form-control" {...register("firstName", { required: true })} />
+                    </div>
+                    <div className="col-6">
+                      <label className="form-label small font-weight-bold">Last Name</label>
+                      <input type="text" className="form-control" {...register("lastName", { required: true })} />
+                    </div>
+                    <div className="col-6">
+                      <label className="form-label small font-weight-bold">Date of Birth</label>
+                      <input type="date" className="form-control" {...register("dateOfBirth", { required: true })} />
+                    </div>
+                    <div className="col-6">
+                      <label className="form-label small font-weight-bold">Gender</label>
+                      <select className="form-select" {...register("gender")}>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label small font-weight-bold">Phone Number</label>
+                      <input type="tel" className="form-control" {...register("phone", { required: true })} />
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label small font-weight-bold">Email Address</label>
+                      <input type="email" className="form-control" {...register("email")} readOnly disabled />
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label small font-weight-bold">Address</label>
+                      <input type="text" className="form-control" {...register("address")} />
+                    </div>
+                    <div className="col-12">
+                      <label className="form-label small font-weight-bold">Medical History / Allergies</label>
+                      <textarea className="form-control" rows="3" placeholder="Specify drug allergies, existing medical conditions..." {...register("medicalHistory")}></textarea>
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer border-0 p-3 bg-light">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary" style={{ backgroundColor: '#0D9488', borderColor: '#0D9488' }}>Save Changes</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

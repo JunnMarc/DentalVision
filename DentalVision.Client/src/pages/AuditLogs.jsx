@@ -106,18 +106,20 @@ const AuditLogs = () => {
                     <td>{new Date(l.timestamp).toLocaleString()}</td>
                     <td className="font-weight-bold">{l.userEmail || 'System'}</td>
                     <td>
-                      <span className={`badge ${
-                        l.action.startsWith('LOGIN_FAILED') || l.action.startsWith('DELETE') ? 'bg-danger' : 
-                        l.action.startsWith('LOGIN_SUCCESS') || l.action.startsWith('CREATE') ? 'bg-success' : 'bg-primary'
-                      }`}>
-                        {l.action}
+                      <span className="font-weight-bold" style={{ 
+                        color: l.action.startsWith('LOGIN_FAILED') || l.action.startsWith('DELETE') ? '#DC2626' : 
+                               l.action.startsWith('LOGIN_SUCCESS') || l.action.startsWith('CREATE') ? '#059669' : '#2563EB',
+                        fontSize: '12px'
+                      }}>
+                        ● {l.action}
                       </span>
                     </td>
                     <td>
-                      <span className={`badge ${
-                        (l.logType || 'System') === 'Security' ? 'bg-warning text-dark' : 'bg-info text-dark'
-                      }`}>
-                        {l.logType || 'System'}
+                      <span className="font-weight-bold" style={{ 
+                        color: (l.logType || 'System') === 'Security' ? '#D97706' : '#0891B2',
+                        fontSize: '12px'
+                      }}>
+                        ● {l.logType || 'System'}
                       </span>
                     </td>
                     <td><code>{l.tableName}</code></td>

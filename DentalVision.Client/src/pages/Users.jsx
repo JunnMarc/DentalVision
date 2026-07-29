@@ -103,17 +103,22 @@ const Users = () => {
                     </td>
                     <td>{u.email}</td>
                     <td>
-                      <span className={`badge ${
-                        u.role === 'Administrator' ? 'bg-primary' :
-                        u.role === 'Dentist' ? 'bg-info text-dark' : 'bg-secondary'
-                      }`}>
+                      <span className="font-weight-bold" style={{ 
+                        color: u.role === 'Administrator' ? '#2563EB' :
+                               u.role === 'Dentist' ? '#0891B2' :
+                               u.role === 'Receptionist' ? '#475569' : '#64748B',
+                        fontSize: '13px'
+                      }}>
                         {u.role}
                       </span>
                     </td>
                     <td>{new Date(u.createdAt).toLocaleDateString()}</td>
                     <td>
-                      <span className={`badge ${u.isActive ? 'bg-success' : 'bg-danger'}`}>
-                        {u.isActive ? 'Active' : 'Inactive'}
+                      <span className="font-weight-bold" style={{ 
+                        color: u.isActive ? '#059669' : '#DC2626',
+                        fontSize: '13px'
+                      }}>
+                        ● {u.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td>

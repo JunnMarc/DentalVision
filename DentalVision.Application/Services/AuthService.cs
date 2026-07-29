@@ -111,6 +111,19 @@ namespace DentalVision.Application.Services
                 };
                 await _unitOfWork.Receptionists.AddAsync(receptionist);
             }
+            else if (request.Role == UserRole.Patient)
+            {
+                var patient = new Patient
+                {
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    PatientCode = $"PAT-{Guid.NewGuid().ToString().Substring(0, 5).ToUpper()}",
+                    DateOfBirth = new DateTime(2000, 1, 1),
+                    Phone = "0000000000"
+                };
+                await _unitOfWork.Patients.AddAsync(patient);
+            }
 
             await _unitOfWork.CompleteAsync();
             return _mapper.Map<UserDto>(user);

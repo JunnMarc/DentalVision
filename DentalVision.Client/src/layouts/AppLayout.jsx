@@ -19,8 +19,15 @@ const AppLayout = ({ children }) => {
   const { user, logout, hasRole } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
 
-  const handleLogout = () => {
+  const handleLogoutClick = (e) => {
+    e.preventDefault();
+    setShowLogoutConfirm(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutConfirm(false);
     logout();
     navigate('/login');
   };
@@ -82,7 +89,7 @@ const AppLayout = ({ children }) => {
               </div>
             </div>
           </div>
-          <button onClick={handleLogout} className="btn btn-link nav-item-link text-start w-100 p-0 m-0 border-0 text-danger" style={{ fontSize: 13 }}>
+          <button onClick={handleLogoutClick} className="btn btn-link nav-item-link text-start w-100 p-0 m-0 border-0 text-danger" style={{ fontSize: 13 }}>
             <FaSignOutAlt />
             <span>Sign Out</span>
           </button>
@@ -108,6 +115,31 @@ const AppLayout = ({ children }) => {
           </div>
         </div>
       </main>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="modal show d-block animate-fade-in" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1100 }}>
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: '380px' }}>
+            <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '16px', overflow: 'hidden' }}>
+              <div className="modal-body p-4 text-center">
+                <div className="d-inline-flex align-items-center justify-content-center rounded-circle mb-3" style={{ width: '60px', height: '60px', backgroundColor: '#FEE2E2', color: '#DC2626' }}>
+                  <FaSignOutAlt size={24} />
+                </div>
+                <h5 className="font-weight-bold text-dark mb-2">Confirm Sign Out</h5>
+                <p className="text-muted small mb-0">Are you sure you want to log out of your account?</p>
+              </div>
+              <div className="modal-footer bg-light border-0 justify-content-center py-3">
+                <button type="button" className="btn btn-sm btn-outline-secondary px-4 me-2" onClick={() => setShowLogoutConfirm(false)}>
+                  Cancel
+                </button>
+                <button type="button" className="btn btn-sm btn-danger px-4 text-white" onClick={handleConfirmLogout}>
+                  Yes, Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

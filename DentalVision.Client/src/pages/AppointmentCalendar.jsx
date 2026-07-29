@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 
 const AppointmentCalendar = () => {
   const [appointments, setAppointments] = useState([]);
+  const [pendingRequests, setPendingRequests] = useState([]);
   const [patients, setPatients] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +21,7 @@ const AppointmentCalendar = () => {
     { id: 3, name: "Dr. Sarah Connor (Periodontics)" },
     { id: 4, name: "Dr. Michael Bluth (Endodontics)" },
     { id: 5, name: "Dr. Emily Watson (Pediatric)" },
-    { id: 6, name: "Dr. Robert Miller (Prosthodontics)" }
+    { id: 6, name: "Dr. Robert Miller (Prostrosthodontics)" }
   ];
 
   const fetchAppointments = async (date = '') => {
@@ -31,6 +32,16 @@ const AppointmentCalendar = () => {
       console.error("Error fetching appointments:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPendingRequests = async () => {
+    try {
+      const response = await api.get('/appointments');
+      const pending = response.data.filter(a => a.status === 4);
+      setPendingRequests(pending);
+    } catch (error) {
+      console.error("Error fetching pending requests:", error);
     }
   };
 
@@ -45,6 +56,7 @@ const AppointmentCalendar = () => {
 
   useEffect(() => {
     fetchAppointments(selectedDate);
+    fetchPendingRequests();
   }, [selectedDate]);
 
   useEffect(() => {
@@ -69,6 +81,7 @@ const AppointmentCalendar = () => {
       setShowModal(false);
       reset();
       fetchAppointments(selectedDate);
+      fetchPendingRequests();
     } catch (error) {
       console.error("Error scheduling appointment:", error);
     }
@@ -78,6 +91,7 @@ const AppointmentCalendar = () => {
     try {
       await api.put(`/appointments/${id}/status`, { status });
       fetchAppointments(selectedDate);
+      fetchPendingRequests();
     } catch (error) {
       console.error("Error updating appointment status:", error);
     }
@@ -117,7 +131,63 @@ const AppointmentCalendar = () => {
 
         {/* Schedule List */}
         <div className="col-md-9">
-          <div className="clinic-card">
+          {/* Pending Confirmation Requests Section */}
+          <div className="clinic-card mb-4 text-start" style={{ borderLeft: '4px solid #F59E0B' }}>
+            <h5 className="font-weight-bold mb-3 d-flex align-items-center justify-content-between">
+              <span style={{ color: '#92400E' }}>Pending Confirmation Requests</span>
+              {pendingRequests.length > 0 && (
+                <span className="font-weight-bold" style={{ fontSize: '13px', color: '#B45309' }}>
+                  ({pendingRequests.length} pending)
+                </span>
+              )}
+            </h5>
+            {pendingRequests.length === 0 ? (
+              <p className="text-muted small py-2 m-0">No pending appointment confirmation requests.</p>
+            ) : (
+              <div className="d-flex flex-column gap-2">
+                {pendingRequests.map(appt => (
+                  <div key={appt.id} className="border rounded p-3 d-flex justify-content-between align-items-center bg-white shadow-sm">
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="bg-warning text-white rounded p-2" style={{ backgroundColor: '#F59E0B' }}>
+                        <FaClock size={16} />
+                      </div>
+                      <div>
+                        <span className="small text-muted font-weight-bold d-block">
+                          {new Date(appt.appointmentDate).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })} at{' '}
+                          {new Date(appt.appointmentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span className="small text-muted d-block mt-1">
+                          Patient: <strong>{appt.patientName}</strong> {appt.patientPhone && appt.patientPhone !== '0000000000' && (
+                            <span className="text-primary font-weight-bold"> ({appt.patientPhone})</span>
+                          )} | Dentist: <strong>{appt.dentistName}</strong>
+                        </span>
+                        <span className="xsmall text-secondary d-block mt-1">Reason: {appt.reason || 'Routine visit'}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="d-flex gap-1">
+                      <button 
+                        onClick={() => handleUpdateStatus(appt.id, 0)} // Approve: Scheduled
+                        className="btn btn-sm btn-success py-1 px-3"
+                        style={{ fontSize: 11, fontWeight: 'bold' }}
+                      >
+                        Approve
+                      </button>
+                      <button 
+                        onClick={() => handleUpdateStatus(appt.id, 2)} // Reject: Cancelled
+                        className="btn btn-sm btn-outline-danger py-1 px-3"
+                        style={{ fontSize: 11 }}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="clinic-card text-start">
             <h5 className="font-weight-bold mb-3">Booked Consultations</h5>
             {loading ? (
               <div className="text-center py-5"><div className="spinner-border text-primary" role="status"></div></div>
@@ -136,27 +206,30 @@ const AppointmentCalendar = () => {
                           {new Date(appt.appointmentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </h6>
                         <span className="small text-muted d-block mt-1">
-                          Patient: <strong>{appt.patientName}</strong> | Dentist: <strong>{appt.dentistName}</strong>
+                          Patient: <strong>{appt.patientName}</strong> {appt.patientPhone && appt.patientPhone !== '0000000000' && (
+                            <span className="text-primary font-weight-bold"> ({appt.patientPhone})</span>
+                          )} | Dentist: <strong>{appt.dentistName}</strong>
                         </span>
                         <span className="xsmall text-secondary d-block mt-1">Reason: {appt.reason || 'Routine visit'}</span>
                       </div>
                     </div>
                     
                     <div className="d-flex align-items-center gap-2">
-                      <span className={`badge px-2 py-1 ${
-                        appt.status === 0 ? 'bg-primary' : 
-                        appt.status === 1 ? 'bg-success' : 
-                        appt.status === 4 ? 'bg-warning text-dark' : 
-                        'bg-danger'
-                      }`}>
-                        {
-                          appt.status === 0 ? 'Scheduled' : 
-                          appt.status === 1 ? 'Completed' : 
-                          appt.status === 2 ? 'Cancelled' : 
-                          appt.status === 3 ? 'No Show' : 
-                          'Requested / Pending'
-                        }
-                      </span>
+                       <span className="font-weight-bold" style={{ 
+                         color: appt.status === 0 ? '#2563EB' : 
+                                appt.status === 1 ? '#059669' : 
+                                appt.status === 4 ? '#D97706' : 
+                                '#DC2626',
+                         fontSize: '13px'
+                       }}>
+                         ● {
+                           appt.status === 0 ? 'Scheduled' : 
+                           appt.status === 1 ? 'Completed' : 
+                           appt.status === 2 ? 'Cancelled' : 
+                           appt.status === 3 ? 'No Show' : 
+                           'Pending Confirmation'
+                         }
+                       </span>
                       
                       {appt.status === 4 && (
                         <div className="d-flex gap-1">

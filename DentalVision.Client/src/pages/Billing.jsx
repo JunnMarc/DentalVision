@@ -197,11 +197,13 @@ const Billing = () => {
                   <td className="text-end">₱{inv.grandTotal?.toFixed(2)}</td>
                   <td className="text-end">₱{inv.balanceDue?.toFixed(2)}</td>
                   <td className="ps-4">
-                    <span className={`badge ${
-                      inv.paymentStatus === 'Paid' || inv.paymentStatus === 2 ? 'badge-paid' :
-                      inv.paymentStatus === 'PartiallyPaid' || inv.paymentStatus === 1 ? 'badge-partial' : 'badge-unpaid'
-                    }`}>
-                      {inv.paymentStatus === 0 ? 'Unpaid' : inv.paymentStatus === 1 ? 'PartiallyPaid' : inv.paymentStatus === 2 ? 'Paid' : inv.paymentStatus}
+                    <span className="font-weight-bold" style={{ 
+                      color: inv.paymentStatus === 'Paid' || inv.paymentStatus === 2 ? '#059669' :
+                             inv.paymentStatus === 'PartiallyPaid' || inv.paymentStatus === 1 ? '#D97706' :
+                             '#DC2626',
+                      fontSize: '13px'
+                    }}>
+                      ● {inv.paymentStatus === 0 ? 'Unpaid' : inv.paymentStatus === 1 ? 'Partially Paid' : inv.paymentStatus === 2 ? 'Paid' : inv.paymentStatus}
                     </span>
                   </td>
                   <td>
@@ -463,11 +465,13 @@ const Billing = () => {
                   <div className="mb-1"><strong>Invoice Date:</strong> {new Date(viewingInvoice.invoiceDate).toLocaleDateString()}</div>
                   <div>
                     <strong>Status:</strong>{' '}
-                    <span className={`badge ${
-                      viewingInvoice.paymentStatus === 'Paid' || viewingInvoice.paymentStatus === 2 ? 'badge-paid' :
-                      viewingInvoice.paymentStatus === 'PartiallyPaid' || viewingInvoice.paymentStatus === 1 ? 'badge-partial' : 'badge-unpaid'
-                    }`}>
-                      {viewingInvoice.paymentStatus === 0 ? 'Unpaid' : viewingInvoice.paymentStatus === 1 ? 'PartiallyPaid' : viewingInvoice.paymentStatus === 2 ? 'Paid' : viewingInvoice.paymentStatus}
+                    <span className="font-weight-bold" style={{ 
+                      color: viewingInvoice.paymentStatus === 'Paid' || viewingInvoice.paymentStatus === 2 ? '#059669' :
+                             viewingInvoice.paymentStatus === 'PartiallyPaid' || viewingInvoice.paymentStatus === 1 ? '#D97706' :
+                             '#DC2626',
+                      fontSize: '13px'
+                    }}>
+                      ● {viewingInvoice.paymentStatus === 0 ? 'Unpaid' : viewingInvoice.paymentStatus === 1 ? 'Partially Paid' : viewingInvoice.paymentStatus === 2 ? 'Paid' : viewingInvoice.paymentStatus}
                     </span>
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using DentalVision.Application.DTOs;
 using DentalVision.Application.Interfaces;
+using DentalVision.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -33,10 +34,19 @@ namespace DentalVision.API.Controllers
         }
 
         [HttpPost("register")]
-        [Authorize(Roles = "Administrator")]
+        [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            if (request.Role != UserRole.Patient)
+            {
+                var isAdmin = User.IsInRole("Administrator") || User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value == "Administrator";
+                if (!isAdmin)
+                {
+                    return StatusCode(403, new { message = "Only administrators can register staff accounts." });
+                }
+            }
 
             try
             {

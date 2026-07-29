@@ -6,6 +6,7 @@ using AutoMapper;
 using DentalVision.Application.DTOs;
 using DentalVision.Application.Interfaces;
 using DentalVision.Domain.Entities;
+using DentalVision.Domain.Enums;
 using DentalVision.Domain.Interfaces;
 
 namespace DentalVision.Application.Services
@@ -72,6 +73,24 @@ namespace DentalVision.Application.Services
         public async Task<PatientDto?> GetByEmailAsync(string email)
         {
             var patient = _unitOfWork.Patients.Find(p => p.Email != null && p.Email.ToLower() == email.ToLower()).FirstOrDefault();
+            if (patient == null)
+            {
+                var user = _unitOfWork.Users.Find(u => u.Email.ToLower() == email.ToLower()).FirstOrDefault();
+                if (user != null && user.Role == UserRole.Patient)
+                {
+                    patient = new Patient
+                    {
+                        FirstName = user.FirstName,
+                        LastName = user.LastName,
+                        Email = user.Email,
+                        PatientCode = $"PAT-{Guid.NewGuid().ToString().Substring(0, 5).ToUpper()}",
+                        DateOfBirth = new DateTime(2000, 1, 1),
+                        Phone = "0000000000"
+                    };
+                    await _unitOfWork.Patients.AddAsync(patient);
+                    await _unitOfWork.CompleteAsync();
+                }
+            }
             return _mapper.Map<PatientDto?>(patient);
         }
 
