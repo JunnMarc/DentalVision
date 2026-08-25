@@ -25,6 +25,7 @@ builder.Services.AddDbContext<DentalVisionDbContext>(options =>
 
 // 2. Register HttpContextAccessor and AutoMapper
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<DentalVision.Application.Interfaces.ITenantProvider, DentalVision.Infrastructure.Services.TenantProvider>();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // 3. Register Core Services & Repositories
@@ -84,6 +85,7 @@ var app = builder.Build();
 
 // 6. Global Exception Middleware
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<MultiTenantMiddleware>();
 
 // Create default folders for uploads
 var webRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");

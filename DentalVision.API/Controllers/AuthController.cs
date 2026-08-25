@@ -58,5 +58,22 @@ namespace DentalVision.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [HttpPost("register-clinic")]
+        [AllowAnonymous]
+        public async Task<IActionResult> RegisterClinic([FromBody] RegisterClinicRequestDto request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            try
+            {
+                var response = await _authService.RegisterClinicAsync(request);
+                return Ok(response);
+            }
+            catch (System.Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

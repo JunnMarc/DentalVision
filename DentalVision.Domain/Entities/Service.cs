@@ -3,10 +3,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DentalVision.Domain.Entities
 {
-    public class Service
+    public class Service : ITenantEntity
     {
         [Column("ServiceID")]
         public int Id { get; set; }
+        public int TenantId { get; set; }
         public string ServiceName { get; set; } = string.Empty;
         public decimal Price { get; set; }
         public string? Description { get; set; }

@@ -3,9 +3,10 @@ using DentalVision.Domain.Enums;
 
 namespace DentalVision.Domain.Entities
 {
-    public class User
+    public class User : ITenantEntity
     {
         public int Id { get; set; }
+        public int TenantId { get; set; }
         public string Email { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
         public string FirstName { get; set; } = string.Empty;

@@ -21,6 +21,20 @@ const AppLayout = ({ children }) => {
   const location = useLocation();
   const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
 
+  React.useEffect(() => {
+    if (user?.themeColor) {
+      document.documentElement.style.setProperty('--secondary-color', user.themeColor);
+      document.documentElement.style.setProperty('--secondary-hover', user.themeColor);
+      document.documentElement.style.setProperty('--primary-color', user.themeColor);
+      document.documentElement.style.setProperty('--primary-hover', user.themeColor);
+    } else {
+      document.documentElement.style.removeProperty('--secondary-color');
+      document.documentElement.style.removeProperty('--secondary-hover');
+      document.documentElement.style.removeProperty('--primary-color');
+      document.documentElement.style.removeProperty('--primary-hover');
+    }
+  }, [user]);
+
   const handleLogoutClick = (e) => {
     e.preventDefault();
     setShowLogoutConfirm(true);
@@ -34,35 +48,46 @@ const AppLayout = ({ children }) => {
 
   const getRoleName = () => {
     if (!user) return '';
-    const roleMap = { 1: "Administrator", 2: "Dentist", 3: "Dental Staff", 4: "Patient" };
+    const roleMap = { 1: "Administrator", 2: "Dentist", 3: "Dental Staff", 4: "Patient", 5: "SuperAdministrator" };
     return typeof user.role === 'number' ? roleMap[user.role] : user.role;
   };
 
-  const menuItems = [
-    { path: '/my-profile', label: 'My Profile', icon: <FaUser />, roles: ['Patient'] },
-    { path: '/dashboard', label: 'Dashboard', icon: <FaThLarge />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
-    { path: '/patients', label: 'Patients', icon: <FaUserFriends />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
-    { path: '/appointments', label: 'Appointments', icon: <FaCalendarAlt />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
-    { path: '/billing', label: 'Billing & Payments', icon: <FaFileInvoiceDollar />, roles: ['Administrator', 'Dental Staff'] },
-    { path: '/plaque/upload', label: 'Dental Upload', icon: <FaCamera />, roles: ['Dentist'] },
-    { path: '/reports', label: 'Clinical Reports', icon: <FaFileAlt />, roles: ['Administrator', 'Dentist'] },
-    { path: '/users', label: 'Staff Accounts', icon: <FaUserFriends />, roles: ['Administrator'] },
-    { path: '/logs', label: 'Audit Logs', icon: <FaHistory />, roles: ['Administrator'] },
-    { path: '/settings', label: 'Clinic Settings', icon: <FaCog />, roles: ['Administrator'] }
-  ];
+  const menuItems = hasRole(['SuperAdministrator'])
+    ? [
+        { path: '/dashboard', label: 'SaaS Dashboard', icon: <FaThLarge />, roles: ['SuperAdministrator'] },
+        { path: '/logs', label: 'System Audit Logs', icon: <FaHistory />, roles: ['SuperAdministrator'] },
+        { path: '/settings', label: 'Platform Settings', icon: <FaCog />, roles: ['SuperAdministrator'] }
+      ]
+    : [
+        { path: '/my-profile', label: 'My Profile', icon: <FaUser />, roles: ['Patient'] },
+        { path: '/dashboard', label: 'Dashboard', icon: <FaThLarge />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
+        { path: '/patients', label: 'Patients', icon: <FaUserFriends />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
+        { path: '/appointments', label: 'Appointments', icon: <FaCalendarAlt />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
+        { path: '/billing', label: 'Billing & Payments', icon: <FaFileInvoiceDollar />, roles: ['Administrator', 'Dental Staff'] },
+        { path: '/plaque/upload', label: 'Dental Upload', icon: <FaCamera />, roles: ['Dentist'] },
+        { path: '/reports', label: 'Clinical Reports', icon: <FaFileAlt />, roles: ['Administrator', 'Dentist'] },
+        { path: '/users', label: 'Staff Accounts', icon: <FaUserFriends />, roles: ['Administrator'] },
+        { path: '/logs', label: 'Audit Logs', icon: <FaHistory />, roles: ['Administrator'] },
+        { path: '/settings', label: 'Clinic Settings', icon: <FaCog />, roles: ['Administrator'] }
+      ];
 
   return (
     <div className="app-container">
       {/* Sidebar */}
       <aside className="sidebar">
         <Link to={user?.role === 4 || user?.role === 'Patient' ? "/my-profile" : "/dashboard"} className="sidebar-header d-flex align-items-center gap-2 text-decoration-none" style={{ cursor: 'pointer' }}>
-          <FaClinicMedical size={24} className="text-teal" style={{ color: '#14B8A6' }} />
+          <FaClinicMedical size={24} className="text-teal" style={{ color: user?.themeColor || '#14B8A6' }} />
           <h5 className="m-0 font-weight-bold tracking-tight text-white">DentalVision</h5>
         </Link>
 
         <nav className="sidebar-nav">
           {menuItems
             .filter(item => hasRole(item.roles))
+            .filter(item => {
+              if (item.path === '/billing' && user && user.enableBilling === false) return false;
+              if (item.path === '/reports' && user && user.enableReports === false) return false;
+              return true;
+            })
             .map(item => (
               <Link 
                 key={item.path}
@@ -77,7 +102,7 @@ const AppLayout = ({ children }) => {
 
         <div className="sidebar-footer">
           <div className="d-flex align-items-center gap-2 mb-2">
-            <div className="avatar bg-teal text-white rounded-circle d-flex align-items-center justify-content-center" style={{ width: 36, height: 36, backgroundColor: '#14B8A6', fontSize: 14 }}>
+            <div className="avatar bg-teal text-white rounded-circle d-flex align-items-center justify-content-center" style={{ width: 36, height: 36, backgroundColor: user?.themeColor || '#14B8A6', fontSize: 14 }}>
               {user?.firstName?.[0] || 'U'}
             </div>
             <div className="user-info text-truncate">

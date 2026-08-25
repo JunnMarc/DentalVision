@@ -27,6 +27,18 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', jwtToken);
       localStorage.setItem('user', JSON.stringify(userProfile));
 
+      // Decode JWT token to extract and cache the TenantSlug
+      try {
+        const payloadBase64 = jwtToken.split('.')[1];
+        const payloadJson = atob(payloadBase64);
+        const decoded = JSON.parse(payloadJson);
+        if (decoded && decoded.TenantSlug) {
+          localStorage.setItem('tenant_slug', decoded.TenantSlug);
+        }
+      } catch (jwtError) {
+        console.error("Failed to parse TenantSlug claim from token:", jwtError);
+      }
+
       setToken(jwtToken);
       setUser(userProfile);
       return { success: true };
@@ -54,11 +66,13 @@ export const AuthProvider = ({ children }) => {
       2: "Dentist",
       3: "Dental Staff",
       4: "Patient",
+      5: "SuperAdministrator",
       "Administrator": "Administrator",
       "Dentist": "Dentist",
       "Receptionist": "Dental Staff",
       "Dental Staff": "Dental Staff",
-      "Patient": "Patient"
+      "Patient": "Patient",
+      "SuperAdministrator": "SuperAdministrator"
     };
     const roleName = roleMap[user.role] || user.role;
     return allowedRoles.includes(roleName);

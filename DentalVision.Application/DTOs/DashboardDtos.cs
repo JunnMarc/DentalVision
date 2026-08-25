@@ -65,4 +65,30 @@ namespace DentalVision.Application.DTOs
         public DateTime Time { get; set; }
         public string Status { get; set; } = string.Empty;
     }
+
+    // Super Admin Dashboard DTO
+    public class SuperAdminDashboardDto
+    {
+        public int TotalClinics { get; set; }
+        public int TotalUsers { get; set; }
+        public int TotalPlaqueAnalyses { get; set; }
+        public decimal TotalRevenue { get; set; }
+        public List<TenantDetailDto> Tenants { get; set; } = new List<TenantDetailDto>();
+    }
+
+    public class TenantDetailDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Slug { get; set; } = string.Empty;
+        public string AdminEmail { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string SubscriptionTier { get; set; } = "Basic";
+        public int MaxUsers { get; set; }
+        public int MaxPlaqueAnalysesPerMonth { get; set; }
+        public bool EnableBilling { get; set; }
+        public bool EnableReports { get; set; }
+        public string ThemeColor { get; set; } = "#14B8A6";
+    }
 }

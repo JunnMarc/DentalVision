@@ -135,13 +135,13 @@ const UploadImage = () => {
                     {loadingStep > 2 && "✓"}
                   </span>
                   <span className={loadingStep === 2 ? "font-weight-bold text-dark" : "text-secondary"}>
-                    Applying Solidity boundary shape-smoothing ($S &lt; 0.8$)...
+                    Applying Solidity boundary shape-smoothing...
                   </span>
                 </div>
               ) : (
                 <div className="d-flex align-items-center gap-2 text-muted" style={{ color: '#94a3b8' }}>
                   <span style={{ width: '12px' }}>•</span>
-                  <span>Applying Solidity boundary shape-smoothing ($S &lt; 0.8$)...</span>
+                  <span>Applying Solidity boundary shape-smoothing...</span>
                 </div>
               )}
 

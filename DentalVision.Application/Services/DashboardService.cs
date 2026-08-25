@@ -6,6 +6,7 @@ using DentalVision.Application.DTOs;
 using DentalVision.Application.Interfaces;
 using DentalVision.Domain.Enums;
 using DentalVision.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace DentalVision.Application.Services
 {
@@ -148,6 +149,48 @@ namespace DentalVision.Application.Services
                 TotalUnpaidInvoices = unpaidInvoices.Count,
                 UnpaidBalanceSum = unpaidInvoices.Sum(i => i.BalanceDue),
                 ScheduledToday = scheduledToday
+            };
+        }
+
+        public async Task<SuperAdminDashboardDto> GetSuperAdminMetricsAsync()
+        {
+            var tenants = _unitOfWork.Tenants.Find(t => true).ToList();
+            var totalUsers = _unitOfWork.Users.Find(u => true).IgnoreQueryFilters().Count();
+            var totalPlaqueAnalyses = _unitOfWork.PlaqueAnalyses.Find(p => true).IgnoreQueryFilters().Count();
+            var totalRevenue = _unitOfWork.Payments.Find(p => true).IgnoreQueryFilters().Sum(p => p.AmountPaid);
+
+            var tenantDetails = new List<TenantDetailDto>();
+            foreach (var t in tenants)
+            {
+                var adminEmail = _unitOfWork.Users.Find(u => u.TenantId == t.Id && u.Role == UserRole.Administrator)
+                    .IgnoreQueryFilters()
+                    .Select(u => u.Email)
+                    .FirstOrDefault() ?? "N/A";
+
+                tenantDetails.Add(new TenantDetailDto
+                {
+                    Id = t.Id,
+                    Name = t.Name,
+                    Slug = t.Slug,
+                    IsActive = t.IsActive,
+                    CreatedAt = t.CreatedAt,
+                    AdminEmail = adminEmail,
+                    SubscriptionTier = t.SubscriptionTier,
+                    MaxUsers = t.MaxUsers,
+                    MaxPlaqueAnalysesPerMonth = t.MaxPlaqueAnalysesPerMonth,
+                    EnableBilling = t.EnableBilling,
+                    EnableReports = t.EnableReports,
+                    ThemeColor = t.ThemeColor
+                });
+            }
+
+            return new SuperAdminDashboardDto
+            {
+                TotalClinics = tenants.Count,
+                TotalUsers = totalUsers,
+                TotalPlaqueAnalyses = totalPlaqueAnalyses,
+                TotalRevenue = totalRevenue,
+                Tenants = tenantDetails
             };
         }
     }

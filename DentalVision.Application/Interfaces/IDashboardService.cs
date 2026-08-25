@@ -8,5 +8,6 @@ namespace DentalVision.Application.Interfaces
         Task<AdminDashboardDto> GetAdminMetricsAsync();
         Task<DentistDashboardDto> GetDentistMetricsAsync(int dentistUserId);
         Task<ReceptionistDashboardDto> GetReceptionistMetricsAsync();
+        Task<SuperAdminDashboardDto> GetSuperAdminMetricsAsync();
     }
 }

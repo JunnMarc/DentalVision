@@ -2,9 +2,10 @@ using System;
 
 namespace DentalVision.Domain.Entities
 {
-    public class AuditLog
+    public class AuditLog : ITenantEntity
     {
         public int Id { get; set; }
+        public int TenantId { get; set; }
         public int? UserId { get; set; }
         public string Action { get; set; } = string.Empty;
         public string LogType { get; set; } = "System"; // "System" or "Security"

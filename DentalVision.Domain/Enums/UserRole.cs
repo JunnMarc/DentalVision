@@ -5,6 +5,7 @@ namespace DentalVision.Domain.Enums
         Administrator = 1,
         Dentist = 2,
         Receptionist = 3,
-        Patient = 4
+        Patient = 4,
+        SuperAdministrator = 5
     }
 }

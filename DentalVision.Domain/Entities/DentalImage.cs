@@ -3,9 +3,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DentalVision.Domain.Entities
 {
-    public class DentalImage
+    public class DentalImage : ITenantEntity
     {
         public int Id { get; set; }
+        public int TenantId { get; set; }
         public int PatientId { get; set; }
         public int? AppointmentId { get; set; }
 

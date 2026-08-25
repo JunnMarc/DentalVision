@@ -12,6 +12,7 @@ namespace DentalVision.Infrastructure.Repositories
         public UnitOfWork(DentalVisionDbContext context)
         {
             _context = context;
+            Tenants = new Repository<Tenant>(_context);
             Users = new Repository<User>(_context);
             Dentists = new Repository<Dentist>(_context);
             Receptionists = new Repository<Receptionist>(_context);
@@ -30,6 +31,7 @@ namespace DentalVision.Infrastructure.Repositories
             Services = new Repository<Service>(_context);
         }
 
+        public IRepository<Tenant> Tenants { get; }
         public IRepository<User> Users { get; }
         public IRepository<Dentist> Dentists { get; }
         public IRepository<Receptionist> Receptionists { get; }

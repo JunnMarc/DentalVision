@@ -4,13 +4,15 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5098/api',
 });
 
-// Request interceptor to automatically append JWT token
+// Request interceptor to automatically append JWT token and Tenant context
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    const tenantSlug = localStorage.getItem('tenant_slug') || 'default';
+    config.headers['X-Tenant-Slug'] = tenantSlug;
     return config;
   },
   (error) => Promise.reject(error)

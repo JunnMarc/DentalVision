@@ -37,5 +37,23 @@ namespace DentalVision.Application.DTOs
         public string LastName { get; set; } = string.Empty;
         public UserRole Role { get; set; }
         public bool IsActive { get; set; }
+
+        // Tenant Configuration properties passed to client
+        public string? SubscriptionTier { get; set; }
+        public int MaxUsers { get; set; }
+        public int MaxPlaqueAnalysesPerMonth { get; set; }
+        public bool EnableBilling { get; set; }
+        public bool EnableReports { get; set; }
+        public string? ThemeColor { get; set; }
+    }
+
+    public class RegisterClinicRequestDto
+    {
+        public string ClinicName { get; set; } = string.Empty;
+        public string ClinicSlug { get; set; } = string.Empty;
+        public string AdminEmail { get; set; } = string.Empty;
+        public string AdminPassword { get; set; } = string.Empty;
+        public string AdminFirstName { get; set; } = string.Empty;
+        public string AdminLastName { get; set; } = string.Empty;
     }
 }

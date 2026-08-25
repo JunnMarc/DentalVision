@@ -3,9 +3,10 @@ using DentalVision.Domain.Enums;
 
 namespace DentalVision.Domain.Entities
 {
-    public class Payment
+    public class Payment : ITenantEntity
     {
         public int Id { get; set; }
+        public int TenantId { get; set; }
         public int InvoiceId { get; set; }
         public DateTime PaymentDate { get; set; } = DateTime.UtcNow;
         public decimal AmountPaid { get; set; }

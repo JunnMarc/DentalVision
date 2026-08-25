@@ -6,6 +6,7 @@ namespace DentalVision.Domain.Interfaces
 {
     public interface IUnitOfWork : IDisposable
     {
+        IRepository<Tenant> Tenants { get; }
         IRepository<User> Users { get; }
         IRepository<Dentist> Dentists { get; }
         IRepository<Receptionist> Receptionists { get; }

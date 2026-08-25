@@ -23,12 +23,14 @@ namespace DentalVision.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IImageProcessingService _imageProcessingService;
         private readonly IMapper _mapper;
+        private readonly ITenantProvider _tenantProvider;
 
-        public PlaqueController(IUnitOfWork unitOfWork, IImageProcessingService imageProcessingService, IMapper mapper)
+        public PlaqueController(IUnitOfWork unitOfWork, IImageProcessingService imageProcessingService, IMapper mapper, ITenantProvider tenantProvider)
         {
             _unitOfWork = unitOfWork;
             _imageProcessingService = imageProcessingService;
             _mapper = mapper;
+            _tenantProvider = tenantProvider;
         }
 
         [HttpPost("upload")]
@@ -66,6 +68,22 @@ namespace DentalVision.API.Controllers
             // Read current user sub ID from JWT
             var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             int.TryParse(userIdStr, out int userId);
+
+            // Validate Plaque Analysis Quota Limit
+            var tenantId = _tenantProvider.GetTenantId();
+            if (tenantId.HasValue)
+            {
+                var tenant = await _unitOfWork.Tenants.GetByIdAsync(tenantId.Value);
+                if (tenant != null && tenant.MaxPlaqueAnalysesPerMonth > 0)
+                {
+                    var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+                    var monthlyScanCount = _unitOfWork.PlaqueAnalyses.Find(p => p.CreatedAt >= startOfMonth).Count();
+                    if (monthlyScanCount >= tenant.MaxPlaqueAnalysesPerMonth)
+                    {
+                        return BadRequest(new { message = $"Monthly AI Plaque Analysis limit ({tenant.MaxPlaqueAnalysesPerMonth}) reached for your clinic's plan." });
+                    }
+                }
+            }
 
             // Create DentalImage entity
             var dentalImage = new DentalImage

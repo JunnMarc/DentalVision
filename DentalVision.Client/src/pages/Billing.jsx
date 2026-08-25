@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { FaFileInvoice, FaPlus, FaCheckCircle, FaTrashAlt } from 'react-icons/fa';
@@ -237,12 +238,12 @@ const Billing = () => {
       </div>
 
       {/* Create Invoice Modal */}
-      {showInvoiceModal && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+      {showInvoiceModal && createPortal(
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
           <div className="modal-dialog modal-lg modal-dialog-centered">
             <div className="modal-content" style={{ borderRadius: '16px', overflow: 'hidden' }}>
               <div className="modal-header bg-primary text-white border-0 py-3" style={{ backgroundColor: '#2563EB' }}>
-                <h5 className="modal-title font-weight-bold">Create Patient Invoice</h5>
+                <h5 className="modal-title font-weight-bold text-white">Create Patient Invoice</h5>
                 <button type="button" className="btn-close btn-close-white" onClick={() => setShowInvoiceModal(false)}></button>
               </div>
               <form onSubmit={handleSubmit(onCreateInvoiceSubmit)}>
@@ -343,16 +344,17 @@ const Billing = () => {
               </form>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Record Payment Modal */}
-      {showPaymentModal && selectedInvoice && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+      {showPaymentModal && selectedInvoice && createPortal(
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content" style={{ borderRadius: '16px', overflow: 'hidden' }}>
               <div className="modal-header bg-success text-white border-0 py-3" style={{ backgroundColor: '#14B8A6' }}>
-                <h5 className="modal-title font-weight-bold">Record Payment</h5>
+                <h5 className="modal-title font-weight-bold text-white">Record Payment</h5>
                 <button type="button" className="btn-close btn-close-white" onClick={() => setShowPaymentModal(false)}></button>
               </div>
               <form onSubmit={onRecordPaymentSubmit}>
@@ -447,12 +449,13 @@ const Billing = () => {
               </form>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* View Invoice Details Modal */}
-      {viewingInvoice && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+      {viewingInvoice && createPortal(
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content" style={{ borderRadius: '16px', overflow: 'hidden' }}>
               <div className="modal-header bg-teal text-white border-0 py-3" style={{ backgroundColor: '#0D9488' }}>
@@ -530,7 +533,8 @@ const Billing = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

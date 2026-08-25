@@ -3,9 +3,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DentalVision.Domain.Entities
 {
-    public class ClinicalReport
+    public class ClinicalReport : ITenantEntity
     {
         public int Id { get; set; }
+        public int TenantId { get; set; }
         public int PatientId { get; set; }
         public int DentistId { get; set; }
         public int AnalysisId { get; set; } // 1:1 with PlaqueAnalysis

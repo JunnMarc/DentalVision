@@ -6,14 +6,18 @@ namespace DentalVision.Infrastructure.Persistence
     public class DentalVisionDbContext : DbContext
     {
         private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor? _httpContextAccessor;
+        private readonly DentalVision.Application.Interfaces.ITenantProvider? _tenantProvider;
 
         public DentalVisionDbContext(
             DbContextOptions<DentalVisionDbContext> options,
-            Microsoft.AspNetCore.Http.IHttpContextAccessor? httpContextAccessor = null) : base(options)
+            Microsoft.AspNetCore.Http.IHttpContextAccessor? httpContextAccessor = null,
+            DentalVision.Application.Interfaces.ITenantProvider? tenantProvider = null) : base(options)
         {
             _httpContextAccessor = httpContextAccessor;
+            _tenantProvider = tenantProvider;
         }
 
+        public DbSet<Tenant> Tenants { get; set; } = null!;
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<Dentist> Dentists { get; set; } = null!;
         public DbSet<Receptionist> Receptionists { get; set; } = null!;
@@ -34,6 +38,22 @@ namespace DentalVision.Infrastructure.Persistence
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // Tenant Table Mapping
+            modelBuilder.Entity<Tenant>().ToTable("Tenants");
+            modelBuilder.Entity<Tenant>().HasIndex(t => t.Slug).IsUnique();
+
+            // Apply Global Tenant Query Filter
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                if (typeof(ITenantEntity).IsAssignableFrom(entityType.ClrType))
+                {
+                    var method = typeof(DentalVisionDbContext)
+                        .GetMethod(nameof(ConfigureTenantFilter), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                        ?.MakeGenericMethod(entityType.ClrType);
+                    method?.Invoke(this, new object[] { modelBuilder });
+                }
+            }
 
             // Table mappings matching the ERD naming conventions exactly
             modelBuilder.Entity<User>().ToTable("Users");
@@ -138,6 +158,11 @@ namespace DentalVision.Infrastructure.Persistence
 
         }
 
+        private void ConfigureTenantFilter<TEntity>(ModelBuilder modelBuilder) where TEntity : class, ITenantEntity
+        {
+            modelBuilder.Entity<TEntity>().HasQueryFilter(e => e.TenantId == (_tenantProvider != null ? _tenantProvider.GetTenantId() : 0));
+        }
+
         public override int SaveChanges()
         {
             OnBeforeSaveChanges();
@@ -153,6 +178,20 @@ namespace DentalVision.Infrastructure.Persistence
         private void OnBeforeSaveChanges()
         {
             ChangeTracker.DetectChanges();
+
+            // Auto-assign TenantId for newly added entities
+            var currentTenantId = _tenantProvider?.GetTenantId();
+            foreach (var entry in ChangeTracker.Entries<ITenantEntity>())
+            {
+                if (entry.State == EntityState.Added)
+                {
+                    if (entry.Entity.TenantId == 0 && currentTenantId.HasValue)
+                    {
+                        entry.Entity.TenantId = currentTenantId.Value;
+                    }
+                }
+            }
+
             var auditEntries = new System.Collections.Generic.List<AuditEntry>();
 
             var httpContext = _httpContextAccessor?.HttpContext;

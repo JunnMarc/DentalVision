@@ -2,10 +2,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DentalVision.Domain.Entities
 {
-    public class InvoiceItem
+    public class InvoiceItem : ITenantEntity
     {
         [Column("InvoiceItemID")]
         public int Id { get; set; }
+        public int TenantId { get; set; }
         public int InvoiceId { get; set; }
         public int ServiceId { get; set; }
         public string Description { get; set; } = string.Empty;

@@ -52,7 +52,6 @@ const Home = () => {
               </Link>
             ) : (
               <>
-                <Link to="/login" className="text-decoration-none text-secondary small hover:text-dark me-2">Dentist Login</Link>
                 <Link 
                   to="/login" 
                   className="btn btn-sm px-4 text-white"
@@ -64,7 +63,7 @@ const Home = () => {
                     boxShadow: '0 4px 12px rgba(14, 165, 233, 0.2)'
                   }}
                 >
-                  Enter Platform
+                  Login
                 </Link>
               </>
             )}

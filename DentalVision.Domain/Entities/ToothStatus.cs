@@ -2,9 +2,10 @@ using System;
 
 namespace DentalVision.Domain.Entities
 {
-    public class ToothStatus
+    public class ToothStatus : ITenantEntity
     {
         public int Id { get; set; }
+        public int TenantId { get; set; }
         public int PatientId { get; set; }
         public int ToothNumber { get; set; }
         public string Status { get; set; } = "Healthy"; // Healthy, Caries, Restored, Missing, BridgeCrown

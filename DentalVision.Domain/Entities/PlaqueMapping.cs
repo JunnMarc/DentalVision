@@ -3,9 +3,10 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DentalVision.Domain.Entities
 {
-    public class PlaqueMapping
+    public class PlaqueMapping : ITenantEntity
     {
         public int Id { get; set; }
+        public int TenantId { get; set; }
         public int AnalysisId { get; set; }
         public int ToothNumber { get; set; }
         public string PlaqueLevel { get; set; } = "Low"; // Low, Medium, High

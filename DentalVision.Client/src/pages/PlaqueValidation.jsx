@@ -43,6 +43,18 @@ const PlaqueValidation = () => {
   };
 
   useEffect(() => {
+    const fetchSecureImage = async (imageId) => {
+      try {
+        const response = await api.get(`/plaque/analysis/image/${imageId}`, {
+          responseType: 'blob'
+        });
+        const blobUrl = URL.createObjectURL(response.data);
+        setImagePath(blobUrl);
+      } catch (err) {
+        console.error("Failed to load secure dental image:", err);
+      }
+    };
+
     const fetchAnalysisData = async () => {
       try {
         const response = await api.get(`/plaque/analysis/${analysisId}`);
@@ -51,9 +63,11 @@ const PlaqueValidation = () => {
         setCoveragePercentage(data.coveragePercentage);
         setMappings(data.mappings || []);
         
-        // Find path
-        // Since the database contains the relative filepath, we map it to the backend host
-        setImagePath(data.imageId ? `http://localhost:5098/api/plaque/analysis/image/${data.imageId}` : '');
+        if (data.imageId) {
+          await fetchSecureImage(data.imageId);
+        } else {
+          setImagePath('');
+        }
       } catch (error) {
         console.error("Error loading plaque analysis record:", error);
       }

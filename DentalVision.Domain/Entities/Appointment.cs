@@ -5,9 +5,10 @@ using DentalVision.Domain.Enums;
 
 namespace DentalVision.Domain.Entities
 {
-    public class Appointment
+    public class Appointment : ITenantEntity
     {
         public int Id { get; set; }
+        public int TenantId { get; set; }
         public int PatientId { get; set; }
         public int DentistId { get; set; }
         public DateTime AppointmentDate { get; set; }

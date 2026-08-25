@@ -44,5 +44,13 @@ namespace DentalVision.API.Controllers
             var data = await _dashboardService.GetReceptionistMetricsAsync();
             return Ok(data);
         }
+
+        [HttpGet("superadmin")]
+        [Authorize(Roles = "SuperAdministrator")]
+        public async Task<IActionResult> GetSuperAdminDashboard()
+        {
+            var data = await _dashboardService.GetSuperAdminMetricsAsync();
+            return Ok(data);
+        }
     }
 }

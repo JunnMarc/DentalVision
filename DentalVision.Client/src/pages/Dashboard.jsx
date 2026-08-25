@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { 
@@ -7,7 +8,11 @@ import {
   FaDollarSign, 
   FaClipboardList, 
   FaArrowRight, 
-  FaExclamationCircle 
+  FaExclamationCircle,
+  FaClinicMedical,
+  FaCamera,
+  FaFileInvoiceDollar,
+  FaFileAlt
 } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 
@@ -46,6 +51,7 @@ const Dashboard = () => {
         let endpoint = '/dashboard/admin';
         if (hasRole(['Dentist'])) endpoint = '/dashboard/dentist';
         if (hasRole(['Dental Staff'])) endpoint = '/dashboard/receptionist';
+        if (hasRole(['SuperAdministrator'])) endpoint = '/dashboard/superadmin';
 
         const response = await api.get(endpoint);
         setData(response.data);
@@ -57,6 +63,62 @@ const Dashboard = () => {
     };
     fetchDashboardData();
   }, [user]);
+
+  const handleToggleTenantStatus = async (tenantId) => {
+    try {
+      const response = await api.put(`/tenants/${tenantId}/toggle-status`);
+      setData(prev => ({
+        ...prev,
+        tenants: prev.tenants.map(t => t.id === tenantId ? { ...t, isActive: response.data.isActive } : t)
+      }));
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to update tenant status.");
+    }
+  };
+
+  const [selectedTenant, setSelectedTenant] = useState(null);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [configTier, setConfigTier] = useState('Basic');
+  const [configMaxUsers, setConfigMaxUsers] = useState(5);
+  const [configMaxScans, setConfigMaxScans] = useState(50);
+  const [configEnableBilling, setConfigEnableBilling] = useState(true);
+  const [configEnableReports, setConfigEnableReports] = useState(true);
+  const [configThemeColor, setConfigThemeColor] = useState('#14B8A6');
+
+  const handleOpenConfigModal = (tenant) => {
+    setSelectedTenant(tenant);
+    setConfigTier(tenant.subscriptionTier || 'Basic');
+    setConfigMaxUsers(tenant.maxUsers || 5);
+    setConfigMaxScans(tenant.maxPlaqueAnalysesPerMonth || 50);
+    setConfigEnableBilling(tenant.enableBilling !== false);
+    setConfigEnableReports(tenant.enableReports !== false);
+    setConfigThemeColor(tenant.themeColor || '#14B8A6');
+    setIsConfigModalOpen(true);
+  };
+
+  const handleSaveConfig = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        subscriptionTier: configTier,
+        maxUsers: parseInt(configMaxUsers),
+        maxPlaqueAnalysesPerMonth: parseInt(configMaxScans),
+        enableBilling: configEnableBilling,
+        enableReports: configEnableReports,
+        themeColor: configThemeColor
+      };
+      await api.put(`/tenants/${selectedTenant.id}/configuration`, payload);
+      alert("Tenant configuration saved successfully!");
+      setIsConfigModalOpen(false);
+      
+      // Reload superadmin statistics to reflect the changes in the list
+      const endpoint = '/dashboard/superadmin';
+      const response = await api.get(endpoint);
+      setData(response.data);
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to save configuration.");
+    }
+  };
 
   if (loading) {
     return <div className="text-center py-5"><div className="spinner-border text-primary" role="status"></div></div>;
@@ -376,6 +438,355 @@ const Dashboard = () => {
             </div>
           )}
         </div>
+      </div>
+    );
+  }
+
+  // --- SUPER ADMINISTRATOR DASHBOARD VIEW ---
+  if (hasRole(['SuperAdministrator'])) {
+    return (
+      <div className="container-fluid py-4" style={{ backgroundColor: '#F8FAFC', minHeight: '85vh' }}>
+        {/* Header Title Banner */}
+        <div className="d-flex align-items-center justify-content-between mb-4 bg-white p-4 shadow-sm rounded-4 border-0">
+          <div>
+            <h3 className="font-weight-bold text-dark mb-1">Central SaaS Control Panel</h3>
+            <p className="text-muted mb-0">System-wide metrics and clinic tenant account operations</p>
+          </div>
+          <span className="badge bg-danger px-3 py-2 fs-7 font-weight-bold shadow-sm" style={{ borderRadius: '8px' }}>
+            Owner Developer Access Only
+          </span>
+        </div>
+
+        {/* System Health Cards */}
+        <div className="row g-4 mb-4">
+          <div className="col-md-3">
+            <div className="card shadow-sm border-0 p-4 bg-white text-dark rounded-4" style={{ borderLeft: '5px solid #2563EB' }}>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <span className="text-muted font-weight-bold small text-uppercase">Clinics Onboarded</span>
+                <span className="p-2 rounded bg-primary bg-opacity-10 text-primary">
+                  <FaClinicMedical size={20} />
+                </span>
+              </div>
+              <h2 className="font-weight-bold text-dark mb-0">{data?.totalClinics || 0}</h2>
+              <span className="text-success small mt-1 d-block font-weight-bold">
+                100% System Uptime
+              </span>
+            </div>
+          </div>
+
+          <div className="col-md-3">
+            <div className="card shadow-sm border-0 p-4 bg-white text-dark rounded-4" style={{ borderLeft: '5px solid #14B8A6' }}>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <span className="text-muted font-weight-bold small text-uppercase">System-wide Users</span>
+                <span className="p-2 rounded bg-info bg-opacity-10 text-info">
+                  <FaUserFriends size={20} />
+                </span>
+              </div>
+              <h2 className="font-weight-bold text-dark mb-0">{data?.totalUsers || 0}</h2>
+              <span className="text-muted small mt-1 d-block">
+                Dentists, staff, and patients
+              </span>
+            </div>
+          </div>
+
+          <div className="col-md-3">
+            <div className="card shadow-sm border-0 p-4 bg-white text-dark rounded-4" style={{ borderLeft: '5px solid #F59E0B' }}>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <span className="text-muted font-weight-bold small text-uppercase">AI Plaque Analyses</span>
+                <span className="p-2 rounded bg-warning bg-opacity-10 text-warning">
+                  <FaCamera size={20} />
+                </span>
+              </div>
+              <h2 className="font-weight-bold text-dark mb-0">{data?.totalPlaqueAnalyses || 0}</h2>
+              <span className="text-muted small mt-1 d-block">
+                Processed segments system-wide
+              </span>
+            </div>
+          </div>
+
+          <div className="col-md-3">
+            <div className="card shadow-sm border-0 p-4 bg-white text-dark rounded-4" style={{ borderLeft: '5px solid #10B981' }}>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <span className="text-muted font-weight-bold small text-uppercase">Aggregate Revenue</span>
+                <span className="p-2 rounded bg-success bg-opacity-10 text-success">
+                  <FaFileInvoiceDollar size={20} />
+                </span>
+              </div>
+              <h2 className="font-weight-bold text-dark mb-0">₱{(data?.totalRevenue || 0).toLocaleString()}</h2>
+              <span className="text-success small mt-1 d-block font-weight-bold">
+                Platform Billing Operations
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tenant Clinics Management Table */}
+        <div className="card shadow-sm border-0 rounded-4 bg-white p-4">
+          <div className="d-flex align-items-center justify-content-between mb-3">
+            <h5 className="mb-0 font-weight-bold text-dark">Tenant Accounts Management</h5>
+            <span className="text-muted small">Manage clinic states and access status</span>
+          </div>
+
+          <div className="table-responsive">
+            <table className="table table-hover align-middle table-clinic">
+              <thead>
+                <tr>
+                  <th>Clinic Name</th>
+                  <th>Domain / Slug</th>
+                  <th>Admin Contact</th>
+                  <th>Created Date</th>
+                  <th>Status</th>
+                  <th>Access Controls</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.tenants?.map(t => (
+                  <tr key={t.id}>
+                    <td>
+                      <div className="font-weight-bold text-dark">{t.name}</div>
+                      {t.id === 1 && <span className="badge bg-primary bg-opacity-10 text-primary small font-weight-bold py-0.5 px-2 rounded-pill mt-1">Default Tenant</span>}
+                    </td>
+                    <td>
+                      <code>{t.slug}</code>
+                    </td>
+                    <td>{t.adminEmail}</td>
+                    <td>{new Date(t.createdAt).toLocaleDateString()}</td>
+                    <td>
+                      <span className={`badge px-3 py-1 font-weight-bold rounded-pill ${t.isActive ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'}`}>
+                        {t.isActive ? 'Active' : 'Suspended'}
+                      </span>
+                    </td>
+                    <td>
+                      {t.id === 1 ? (
+                        <button className="btn btn-sm btn-outline-secondary disabled" style={{ borderRadius: '8px' }}>
+                          Master Tenant Locked
+                        </button>
+                      ) : (
+                        <div className="d-flex gap-2">
+                          <button 
+                            onClick={() => handleToggleTenantStatus(t.id)} 
+                            className={`btn btn-sm font-weight-bold ${t.isActive ? 'btn-outline-danger' : 'btn-success text-white'}`}
+                            style={{ borderRadius: '8px' }}
+                          >
+                            {t.isActive ? 'Suspend' : 'Activate'}
+                          </button>
+                          <button 
+                            onClick={() => handleOpenConfigModal(t)} 
+                            className="btn btn-sm btn-teal-clinic font-weight-bold"
+                            style={{ borderRadius: '8px' }}
+                          >
+                            Configure
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Configuration Modal */}
+        {isConfigModalOpen && selectedTenant && createPortal(
+          <div className="modal show d-block" style={{ backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(10px)', zIndex: 1050 }}>
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content shadow-lg border-0 rounded-4" style={{ overflow: 'hidden' }}>
+                <form onSubmit={handleSaveConfig}>
+                  {/* Header */}
+                  <div className="modal-header bg-white border-bottom border-light py-3 px-4 rounded-top-4">
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="d-flex align-items-center justify-content-center rounded-3" style={{ width: '40px', height: '40px', backgroundColor: '#F1F5F9' }}>
+                        <FaClinicMedical size={20} style={{ color: configThemeColor }} />
+                      </div>
+                      <div>
+                        <h6 className="modal-title font-weight-bold m-0 text-dark" style={{ fontSize: '1.05rem', letterSpacing: '-0.015em' }}>Configure Clinic Settings</h6>
+                        <span className="xsmall d-block text-muted" style={{ fontSize: '11px' }}>Settings for {selectedTenant.name}</span>
+                      </div>
+                    </div>
+                    <button 
+                      type="button" 
+                      className="btn-close shadow-none border-0 bg-transparent text-muted fs-4" 
+                      onClick={() => setIsConfigModalOpen(false)}
+                      style={{ outline: 'none' }}
+                    >×</button>
+                  </div>
+
+                  {/* Body */}
+                  <div className="modal-body p-4" style={{ backgroundColor: '#F8FAFC' }}>
+                    {/* Card 1: Plan Details & Quotas */}
+                    <div className="card border-0 shadow-sm rounded-4 p-3 mb-3 bg-white">
+                      <div className="font-weight-bold text-dark small mb-3">Plan Details & Quotas</div>
+                      
+                      <div className="mb-3">
+                        <label className="form-label font-weight-bold xsmall text-uppercase text-muted" style={{ fontSize: '10px', letterSpacing: '0.05em' }}>Subscription Tier</label>
+                        <select 
+                          className="form-select border shadow-none bg-white" 
+                          value={configTier} 
+                          onChange={(e) => setConfigTier(e.target.value)}
+                          style={{ borderRadius: '8px', border: '1px solid #E2E8F0', padding: '8px 12px', fontSize: '13.5px', fontWeight: '500' }}
+                        >
+                          <option value="Basic">Basic Plan</option>
+                          <option value="Professional">Professional Plan</option>
+                          <option value="Enterprise">Enterprise Plan</option>
+                        </select>
+                      </div>
+
+                      <div className="row g-2">
+                        <div className="col">
+                          <label className="form-label font-weight-bold xsmall text-uppercase text-muted" style={{ fontSize: '10px', letterSpacing: '0.05em' }}>Max Staff Accounts</label>
+                          <input 
+                            type="number" 
+                            className="form-control border shadow-none bg-white" 
+                            value={configMaxUsers} 
+                            onChange={(e) => setConfigMaxUsers(e.target.value)}
+                            min="1"
+                            required
+                            style={{ borderRadius: '8px', border: '1px solid #E2E8F0', padding: '8px 12px', fontSize: '13.5px' }}
+                          />
+                        </div>
+                        <div className="col">
+                          <label className="form-label font-weight-bold xsmall text-uppercase text-muted" style={{ fontSize: '10px', letterSpacing: '0.05em' }}>Max Monthly Scans</label>
+                          <input 
+                            type="number" 
+                            className="form-control border shadow-none bg-white" 
+                            value={configMaxScans} 
+                            onChange={(e) => setConfigMaxScans(e.target.value)}
+                            min="1"
+                            required
+                            style={{ borderRadius: '8px', border: '1px solid #E2E8F0', padding: '8px 12px', fontSize: '13.5px' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 2: Feature Access Control */}
+                    <div className="card border-0 shadow-sm rounded-4 p-3 mb-3 bg-white">
+                      <div className="font-weight-bold text-dark small mb-3">Feature Modules Access</div>
+                      
+                      <div className="d-flex flex-column gap-2">
+                        <div className="d-flex align-items-center justify-content-between p-2 rounded-3 bg-light bg-opacity-40" style={{ border: '1px solid #F1F5F9' }}>
+                          <div className="d-flex align-items-center gap-2">
+                            <div className="d-flex align-items-center justify-content-center rounded-2 text-teal" style={{ width: '32px', height: '32px', color: '#14B8A6', backgroundColor: 'rgba(20, 184, 166, 0.08)' }}>
+                              <FaFileInvoiceDollar size={15} />
+                            </div>
+                            <div>
+                              <div className="font-weight-bold text-dark xsmall" style={{ fontSize: '12px' }}>Billing & Payments</div>
+                              <div className="text-muted xsmall" style={{ fontSize: '10px' }}>Clinic invoices & transactions</div>
+                            </div>
+                          </div>
+                          <div className="form-check form-switch m-0">
+                            <input 
+                              className="form-check-input" 
+                              type="checkbox" 
+                              checked={configEnableBilling} 
+                              onChange={(e) => setConfigEnableBilling(e.target.checked)} 
+                            />
+                          </div>
+                        </div>
+
+                        <div className="d-flex align-items-center justify-content-between p-2 rounded-3 bg-light bg-opacity-40" style={{ border: '1px solid #F1F5F9' }}>
+                          <div className="d-flex align-items-center gap-2">
+                            <div className="d-flex align-items-center justify-content-center rounded-2" style={{ width: '32px', height: '32px', color: '#6366F1', backgroundColor: 'rgba(99, 102, 241, 0.08)' }}>
+                              <FaFileAlt size={15} />
+                            </div>
+                            <div>
+                              <div className="font-weight-bold text-dark xsmall" style={{ fontSize: '12px' }}>Clinical Reports</div>
+                              <div className="text-muted xsmall" style={{ fontSize: '10px' }}>Advanced patient metrics & downloads</div>
+                            </div>
+                          </div>
+                          <div className="form-check form-switch m-0">
+                            <input 
+                              className="form-check-input" 
+                              type="checkbox" 
+                              checked={configEnableReports} 
+                              onChange={(e) => setConfigEnableReports(e.target.checked)} 
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Theme Branding */}
+                    <div className="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                      <div className="font-weight-bold text-dark small mb-3">Theme Customization (Clinic Brand Color)</div>
+                      
+                      <div className="d-flex align-items-center gap-2 flex-wrap">
+                        {[
+                          { name: 'Teal Clinic', hex: '#14B8A6' },
+                          { name: 'Royal Indigo', hex: '#6366F1' },
+                          { name: 'Sunset Amber', hex: '#F59E0B' },
+                          { name: 'Rose Medical', hex: '#EF4444' },
+                          { name: 'Royal Purple', hex: '#8B5CF6' }
+                        ].map(preset => (
+                          <button
+                            key={preset.hex}
+                            type="button"
+                            onClick={() => setConfigThemeColor(preset.hex)}
+                            className="rounded-circle border-0 p-0 position-relative d-flex align-items-center justify-content-center"
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              backgroundColor: preset.hex,
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+                              transition: 'all 0.2s',
+                              transform: configThemeColor.toLowerCase() === preset.hex.toLowerCase() ? 'scale(1.1)' : 'scale(1)'
+                            }}
+                            title={preset.name}
+                          >
+                            {configThemeColor.toLowerCase() === preset.hex.toLowerCase() && (
+                              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#ffffff' }}></div>
+                            )}
+                          </button>
+                        ))}
+                        
+                        {/* Custom Color Input */}
+                        <div className="ms-auto d-flex align-items-center gap-2 bg-light p-1 px-2 rounded-pill" style={{ border: '1px solid #E2E8F0' }}>
+                          <input 
+                            type="color" 
+                            className="form-control form-control-color border-0 p-0 bg-transparent" 
+                            value={configThemeColor} 
+                            onChange={(e) => setConfigThemeColor(e.target.value)}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer', borderRadius: '50%' }}
+                          />
+                          <span className="font-monospace text-muted xsmall" style={{ fontSize: '10px' }}>{configThemeColor.toUpperCase()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="modal-footer border-top border-light py-3 px-4 bg-white rounded-bottom-4 justify-content-between">
+                    <button 
+                      type="button" 
+                      className="btn btn-outline-secondary font-weight-bold px-3 py-1.5" 
+                      onClick={() => setIsConfigModalOpen(false)}
+                      style={{ borderRadius: '8px', fontSize: '13px', border: '1px solid #E2E8F0', backgroundColor: '#ffffff', color: '#64748B' }}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit" 
+                      className="btn font-weight-bold px-4 py-1.5 text-white" 
+                      style={{ 
+                        borderRadius: '8px', 
+                        backgroundColor: configThemeColor,
+                        border: 'none',
+                        fontSize: '13px',
+                        boxShadow: `0 4px 6px rgba(0, 0, 0, 0.05)`,
+                        transition: 'background-color 0.2s'
+                      }}
+                    >
+                      Save Configuration
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
       </div>
     );
   }

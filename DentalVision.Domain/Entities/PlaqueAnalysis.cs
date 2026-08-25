@@ -5,9 +5,10 @@ using DentalVision.Domain.Enums;
 
 namespace DentalVision.Domain.Entities
 {
-    public class PlaqueAnalysis
+    public class PlaqueAnalysis : ITenantEntity
     {
         public int Id { get; set; }
+        public int TenantId { get; set; }
         public int ImageId { get; set; } // 1:1 with DentalImage
 
         [Column("PlaquePercentage")]

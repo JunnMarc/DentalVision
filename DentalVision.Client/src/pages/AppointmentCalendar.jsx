@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { FaCalendarPlus, FaUser, FaClock, FaCheckCircle } from 'react-icons/fa';
@@ -269,12 +270,12 @@ const AppointmentCalendar = () => {
       </div>
 
       {/* Book Appointment Modal */}
-      {showModal && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+      {showModal && createPortal(
+        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content" style={{ borderRadius: '16px', overflow: 'hidden' }}>
               <div className="modal-header bg-primary text-white border-0 py-3" style={{ backgroundColor: '#2563EB' }}>
-                <h5 className="modal-title font-weight-bold">Schedule Appointment</h5>
+                <h5 className="modal-title font-weight-bold text-white">Schedule Appointment</h5>
                 <button type="button" className="btn-close btn-close-white" onClick={() => setShowModal(false)}></button>
               </div>
               <form onSubmit={handleSubmit(onSubmit)}>
@@ -323,7 +324,8 @@ const AppointmentCalendar = () => {
               </form>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

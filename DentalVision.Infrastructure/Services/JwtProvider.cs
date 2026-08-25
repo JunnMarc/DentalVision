@@ -13,10 +13,12 @@ namespace DentalVision.Infrastructure.Services
     public class JwtProvider : IJwtProvider
     {
         private readonly IConfiguration _configuration;
+        private readonly DentalVision.Infrastructure.Persistence.DentalVisionDbContext _dbContext;
 
-        public JwtProvider(IConfiguration configuration)
+        public JwtProvider(IConfiguration configuration, DentalVision.Infrastructure.Persistence.DentalVisionDbContext dbContext)
         {
             _configuration = configuration;
+            _dbContext = dbContext;
         }
 
         public string GenerateToken(User user)
@@ -29,13 +31,20 @@ namespace DentalVision.Infrastructure.Services
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+            var tenantSlug = _dbContext.Tenants
+                .Where(t => t.Id == user.TenantId)
+                .Select(t => t.Slug)
+                .FirstOrDefault() ?? "default";
+
             var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim(ClaimTypes.Role, user.Role.ToString()),
                 new Claim("firstName", user.FirstName),
-                new Claim("lastName", user.LastName)
+                new Claim("lastName", user.LastName),
+                new Claim("TenantId", user.TenantId.ToString()),
+                new Claim("TenantSlug", tenantSlug)
             };
 
             var token = new JwtSecurityToken(

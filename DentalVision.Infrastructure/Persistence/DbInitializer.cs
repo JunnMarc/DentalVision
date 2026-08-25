@@ -5,6 +5,7 @@ using System.Text.Json;
 using DentalVision.Domain.Entities;
 using DentalVision.Domain.Enums;
 using DentalVision.Application.Common;
+using Microsoft.EntityFrameworkCore;
 
 namespace DentalVision.Infrastructure.Persistence
 {
@@ -12,10 +13,65 @@ namespace DentalVision.Infrastructure.Persistence
     {
         public static void Initialize(DentalVisionDbContext context)
         {
+            bool needsRecreation = false;
+            try
+            {
+                // If Tenants table doesn't exist, this will throw an exception in the old database
+                _ = context.Tenants.Any();
+
+                // If there's no system tenant slug, we force recreation to apply the new seed layout
+                if (!context.Tenants.Any(t => t.Slug == "system"))
+                {
+                    needsRecreation = true;
+                }
+            }
+            catch
+            {
+                needsRecreation = true;
+            }
+
+            if (needsRecreation)
+            {
+                Console.WriteLine("Recreating database to apply Super Admin tenant separation...");
+                context.Database.EnsureDeleted();
+            }
+
             context.Database.EnsureCreated();
 
+            // 0. Seed tenants
+            if (!context.Tenants.Any())
+            {
+                var systemTenant = new Tenant
+                {
+                    Name = "DentalVision SaaS System",
+                    Slug = "system",
+                    IsActive = true,
+                    SubscriptionTier = "Enterprise",
+                    MaxUsers = 999,
+                    MaxPlaqueAnalysesPerMonth = 9999,
+                    EnableBilling = true,
+                    EnableReports = true,
+                    ThemeColor = "#2563EB"
+                };
+                var defaultClinicTenant = new Tenant
+                {
+                    Name = "DentalVision Central Clinic",
+                    Slug = "default",
+                    IsActive = true,
+                    SubscriptionTier = "Professional",
+                    MaxUsers = 10,
+                    MaxPlaqueAnalysesPerMonth = 100,
+                    EnableBilling = true,
+                    EnableReports = true,
+                    ThemeColor = "#14B8A6"
+                };
+                context.Tenants.Add(systemTenant);
+                context.Tenants.Add(defaultClinicTenant);
+                context.SaveChanges(); // systemTenant = 1, defaultClinicTenant = 2
+            }
+
             // Look for any users.
-            if (context.Users.Any())
+            if (context.Users.IgnoreQueryFilters().Any())
             {
                 return;   // DB has been seeded
             }
@@ -39,9 +95,23 @@ namespace DentalVision.Infrastructure.Persistence
             // 2. Seed Users
             var users = new List<User>();
             
+            // Super Admin (Developer Owner)
+            var superAdminUser = new User
+            {
+                TenantId = 1,
+                Email = "superadmin@dentalvision.com",
+                PasswordHash = PasswordHasher.HashPassword("SuperAdmin123!"),
+                FirstName = "Developer",
+                LastName = "Owner",
+                Role = UserRole.SuperAdministrator,
+                IsActive = true
+            };
+            users.Add(superAdminUser);
+
             // Admin
             var adminUser = new User
             {
+                TenantId = 2,
                 Email = "admin@dentalvision.com",
                 PasswordHash = PasswordHasher.HashPassword("Admin123!"),
                 FirstName = "Arthur",
@@ -58,6 +128,7 @@ namespace DentalVision.Infrastructure.Persistence
             {
                 var dentistUser = new User
                 {
+                    TenantId = 2,
                     Email = $"dentist{i}@dentalvision.com",
                     PasswordHash = PasswordHasher.HashPassword("Dentist123!"),
                     FirstName = i switch { 1 => "John", 2 => "Sarah", 3 => "Michael", 4 => "Emily", 5 => "Robert", _ => "Dentist" },
@@ -75,6 +146,7 @@ namespace DentalVision.Infrastructure.Persistence
             {
                 var receptionistUser = new User
                 {
+                    TenantId = 2,
                     Email = $"receptionist{i}@dentalvision.com",
                     PasswordHash = PasswordHasher.HashPassword("Recept123!"),
                     FirstName = i switch { 1 => "Alice", 2 => "Bob", 3 => "Clara", _ => "Receptionist" },
@@ -89,6 +161,7 @@ namespace DentalVision.Infrastructure.Persistence
             // Demo Patient Users
             var patientUser1 = new User
             {
+                TenantId = 2,
                 Email = "james.smith@gmail.com",
                 PasswordHash = PasswordHasher.HashPassword("Patient123!"),
                 FirstName = "James",
@@ -100,6 +173,7 @@ namespace DentalVision.Infrastructure.Persistence
 
             var newPatientUser = new User
             {
+                TenantId = 2,
                 Email = "newpatient@dentalvision.com",
                 PasswordHash = PasswordHasher.HashPassword("Patient123!"),
                 FirstName = "New",
@@ -147,6 +221,7 @@ namespace DentalVision.Infrastructure.Persistence
             {
                 var patient = new Patient
                 {
+                    TenantId = 2,
                     PatientCode = $"PAT-00{i+1:D2}",
                     FirstName = firstNames[i],
                     LastName = lastNames[i],
@@ -164,8 +239,8 @@ namespace DentalVision.Infrastructure.Persistence
             context.SaveChanges();
 
             // Retrieve saved Dentists
-            var activeDentists = context.Dentists.ToList();
-            var activePatients = context.Patients.ToList();
+            var activeDentists = context.Dentists.IgnoreQueryFilters().ToList();
+            var activePatients = context.Patients.IgnoreQueryFilters().ToList();
 
             // 4. Seed 50 Appointments
             var appointments = new List<Appointment>();
@@ -179,6 +254,7 @@ namespace DentalVision.Infrastructure.Persistence
 
                 var appointment = new Appointment
                 {
+                    TenantId = 2,
                     PatientId = patient.Id,
                     DentistId = dentist.Id,
                     AppointmentDate = appointmentDate,
@@ -195,23 +271,23 @@ namespace DentalVision.Infrastructure.Persistence
             context.SaveChanges();
 
             // 5. Seed Services Table
-            if (!context.Services.Any())
+            if (!context.Services.IgnoreQueryFilters().Any())
             {
                 var services = new List<Service>
                 {
-                    new Service { ServiceName = "Dental Consultation", Price = 75.00m, Description = "Comprehensive dental assessment and consult." },
-                    new Service { ServiceName = "Professional Scaling & Polishing", Price = 120.00m, Description = "Complete prophylaxis and scale cleaning." },
-                    new Service { ServiceName = "Composite Filling", Price = 150.00m, Description = "Composite resin dental restoration for caries." },
-                    new Service { ServiceName = "Dental X-Ray", Price = 50.00m, Description = "Intraoral X-Ray imaging check." }
+                    new Service { TenantId = 2, ServiceName = "Dental Consultation", Price = 75.00m, Description = "Comprehensive dental assessment and consult." },
+                    new Service { TenantId = 2, ServiceName = "Professional Scaling & Polishing", Price = 120.00m, Description = "Complete prophylaxis and scale cleaning." },
+                    new Service { TenantId = 2, ServiceName = "Composite Filling", Price = 150.00m, Description = "Composite resin dental restoration for caries." },
+                    new Service { TenantId = 2, ServiceName = "Dental X-Ray", Price = 50.00m, Description = "Intraoral X-Ray imaging check." }
                 };
                 context.Services.AddRange(services);
                 context.SaveChanges();
             }
 
-            var dbServices = context.Services.ToList();
+            var dbServices = context.Services.IgnoreQueryFilters().ToList();
 
             // 6. Seed 50 Invoices & 50 Plaque Analyses (for completed appointments)
-            var completedAppointments = context.Appointments.Where(a => a.Status == AppointmentStatus.Completed).ToList();
+            var completedAppointments = context.Appointments.IgnoreQueryFilters().Where(a => a.Status == AppointmentStatus.Completed).ToList();
 
             for (int i = 0; i < completedAppointments.Count; i++)
             {
@@ -220,6 +296,7 @@ namespace DentalVision.Infrastructure.Persistence
                 // --- INVOICING ---
                 var invoice = new Invoice
                 {
+                    TenantId = 2,
                     PatientId = appt.PatientId,
                     AppointmentId = appt.Id,
                     InvoiceDate = appt.AppointmentDate.AddHours(1),
@@ -232,6 +309,7 @@ namespace DentalVision.Infrastructure.Persistence
                 var chosenService1 = dbServices[i % dbServices.Count];
                 var item1 = new InvoiceItem
                 {
+                    TenantId = 2,
                     ServiceId = chosenService1.Id,
                     Description = chosenService1.ServiceName,
                     UnitPrice = chosenService1.Price,
@@ -245,6 +323,7 @@ namespace DentalVision.Infrastructure.Persistence
                     var chosenService2 = dbServices[(i + 1) % dbServices.Count];
                     var item2 = new InvoiceItem
                     {
+                        TenantId = 2,
                         ServiceId = chosenService2.Id,
                         Description = chosenService2.ServiceName,
                         UnitPrice = chosenService2.Price,
@@ -265,6 +344,7 @@ namespace DentalVision.Infrastructure.Persistence
 
                     var payment = new Payment
                     {
+                        TenantId = 2,
                         AmountPaid = invoice.GrandTotal,
                         PaymentDate = invoice.InvoiceDate.AddMinutes(15),
                         PaymentMethod = PaymentMethod.Card,
@@ -280,6 +360,7 @@ namespace DentalVision.Infrastructure.Persistence
 
                     var payment = new Payment
                     {
+                        TenantId = 2,
                         AmountPaid = partialAmount,
                         PaymentDate = invoice.InvoiceDate.AddMinutes(15),
                         PaymentMethod = PaymentMethod.Cash,
@@ -301,6 +382,7 @@ namespace DentalVision.Infrastructure.Persistence
                     var dentistUser = dentistUsers[i % dentistUsers.Count];
                     var image = new DentalImage
                     {
+                        TenantId = 2,
                         PatientId = appt.PatientId,
                         UploadedByUserId = dentistUser.Id,
                         FilePath = $"/uploads/dental_plaque_disclosed_{i + 1}.png",
@@ -315,6 +397,7 @@ namespace DentalVision.Infrastructure.Persistence
 
                     var analysis = new PlaqueAnalysis
                     {
+                        TenantId = 2,
                         ImageId = image.Id,
                         CoveragePercentage = plaqueCoverage,
                         ConfidenceScore = confidence,
@@ -336,6 +419,7 @@ namespace DentalVision.Infrastructure.Persistence
                     {
                         new PlaqueMapping
                         {
+                            TenantId = 2,
                             AnalysisId = analysis.Id,
                             ToothNumber = 11,
                             PlaqueLevel = "High",
@@ -344,6 +428,7 @@ namespace DentalVision.Infrastructure.Persistence
                         },
                         new PlaqueMapping
                         {
+                            TenantId = 2,
                             AnalysisId = analysis.Id,
                             ToothNumber = 21,
                             PlaqueLevel = "Medium",
@@ -358,6 +443,7 @@ namespace DentalVision.Infrastructure.Persistence
                     {
                         var report = new ClinicalReport
                         {
+                            TenantId = 2,
                             PatientId = appt.PatientId,
                             DentistId = appt.DentistId,
                             AnalysisId = analysis.Id,
@@ -376,9 +462,9 @@ namespace DentalVision.Infrastructure.Persistence
             // Seed global settings
             var settings = new List<ClinicSetting>
             {
-                new ClinicSetting { SettingKey = "ClinicName", SettingValue = "DentalVision Digital Care", Description = "Name of the clinic displayed in reports" },
-                new ClinicSetting { SettingKey = "PlaqueThresholdHigh", SettingValue = "35.0", Description = "Percentage above which plaque accumulation is classified high" },
-                new ClinicSetting { SettingKey = "TaxRate", SettingValue = "0.05", Description = "Default tax rate applied to billing invoices" }
+                new ClinicSetting { TenantId = 2, SettingKey = "ClinicName", SettingValue = "DentalVision Digital Care", Description = "Name of the clinic displayed in reports" },
+                new ClinicSetting { TenantId = 2, SettingKey = "PlaqueThresholdHigh", SettingValue = "35.0", Description = "Percentage above which plaque accumulation is classified high" },
+                new ClinicSetting { TenantId = 2, SettingKey = "TaxRate", SettingValue = "0.05", Description = "Default tax rate applied to billing invoices" }
             };
             context.ClinicSettings.AddRange(settings);
             context.SaveChanges();

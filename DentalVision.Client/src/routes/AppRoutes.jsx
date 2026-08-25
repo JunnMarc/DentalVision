@@ -48,7 +48,7 @@ const AppRoutes = () => {
       <Route 
         path="/dashboard" 
         element={
-          <PrivateRoute allowedRoles={['Administrator', 'Dentist', 'Dental Staff']}>
+          <PrivateRoute allowedRoles={['Administrator', 'Dentist', 'Dental Staff', 'SuperAdministrator']}>
             <Dashboard />
           </PrivateRoute>
         } 
@@ -112,7 +112,7 @@ const AppRoutes = () => {
       <Route 
         path="/logs" 
         element={
-          <PrivateRoute allowedRoles={['Administrator']}>
+          <PrivateRoute allowedRoles={['Administrator', 'SuperAdministrator']}>
             <AuditLogs />
           </PrivateRoute>
         } 
@@ -120,7 +120,7 @@ const AppRoutes = () => {
       <Route 
         path="/settings" 
         element={
-          <PrivateRoute allowedRoles={['Administrator']}>
+          <PrivateRoute allowedRoles={['Administrator', 'SuperAdministrator']}>
             <Settings />
           </PrivateRoute>
         } 
