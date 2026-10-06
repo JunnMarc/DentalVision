@@ -126,9 +126,13 @@ export const MyProfile = () => {
     );
   }
 
-  // Check appointment confirmation status
-  const hasConfirmedAppointment = appointments.some(a => a.status === 0 || a.status === 1);
-  const hasAnyAppointment = appointments.length > 0;
+  // Check appointment status
+  const hasConfirmedAppointment = appointments.some(
+    a => a.status === 0 || a.status === 1 || a.status === 'Scheduled' || a.status === 'Completed'
+  );
+  const hasPendingAppointment = appointments.some(
+    a => a.status === 4 || a.status === 'Requested'
+  );
 
   return (
     <div className="container-fluid p-0 animate-fade-in" style={{ maxWidth: '1320px' }}>
@@ -147,19 +151,25 @@ export const MyProfile = () => {
       )}
 
       {/* Top Banner */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
           <h4 className="font-weight-bold text-dark mb-0">Patient Health & Records Portal</h4>
-          <p className="text-muted small mb-0">Welcome back, {profile?.firstName}! Review your dental care plan and appointments.</p>
+          <p className="text-muted small mb-0">
+            {hasConfirmedAppointment
+              ? `Welcome back, ${profile?.firstName || 'Patient'}! Review your dental care plan and appointments.`
+              : `Welcome, ${profile?.firstName || 'Patient'}! Please schedule your initial consultation to activate your clinical chart.`}
+          </p>
         </div>
-        <div className="d-flex gap-2">
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1.5 px-3"
-            onClick={() => setShowEditProfileModal(true)}
-          >
-            <FaEdit size={12} /> Edit Profile
-          </button>
+        <div className="d-flex gap-2 align-items-center">
+          {hasConfirmedAppointment && (
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1.5 px-3"
+              onClick={() => setShowEditProfileModal(true)}
+            >
+              <FaEdit size={12} /> Edit Profile
+            </button>
+          )}
           <button
             type="button"
             className="btn btn-sm btn-primary d-flex align-items-center gap-1.5 px-3.5 font-weight-bold shadow-sm"
@@ -174,8 +184,12 @@ export const MyProfile = () => {
       <div className="row g-4">
         {/* Left Column: Clinical Profile Card & Allergies Warnings */}
         <div className="col-lg-5">
-          {hasAnyAppointment && !hasConfirmedAppointment ? (
-            <LockedProfileOverlay profile={profile} />
+          {!hasConfirmedAppointment ? (
+            <LockedProfileOverlay
+              profile={profile}
+              hasPendingAppointment={hasPendingAppointment}
+              onBookClick={() => setShowBookingModal(true)}
+            />
           ) : (
             <>
               <ProfileSummaryCard profile={profile} />
