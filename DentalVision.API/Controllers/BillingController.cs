@@ -18,6 +18,13 @@ namespace DentalVision.API.Controllers
             _billingService = billingService;
         }
 
+        [HttpGet("invoices")]
+        public async Task<IActionResult> GetAllInvoices()
+        {
+            var invoices = await _billingService.GetAllInvoicesAsync();
+            return Ok(invoices);
+        }
+
         [HttpGet("invoices/{id}")]
         public async Task<IActionResult> GetInvoiceById(int id)
         {

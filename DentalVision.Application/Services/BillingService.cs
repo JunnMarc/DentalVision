@@ -23,11 +23,23 @@ namespace DentalVision.Application.Services
             _mapper = mapper;
         }
 
+        public async Task<IEnumerable<InvoiceDto>> GetAllInvoicesAsync()
+        {
+            var invoices = _unitOfWork.Invoices.Find(i => true)
+                .Include(i => i.Patient)
+                .Include(i => i.Items)
+                .ThenInclude(item => item.Service)
+                .OrderByDescending(i => i.InvoiceDate)
+                .ToList();
+            return _mapper.Map<IEnumerable<InvoiceDto>>(invoices);
+        }
+
         public async Task<InvoiceDto?> GetInvoiceByIdAsync(int id)
         {
             var invoice = _unitOfWork.Invoices.Find(i => i.Id == id)
                 .Include(i => i.Patient)
                 .Include(i => i.Items)
+                .ThenInclude(item => item.Service)
                 .FirstOrDefault();
             return _mapper.Map<InvoiceDto>(invoice);
         }

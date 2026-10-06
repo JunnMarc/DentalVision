@@ -6,6 +6,7 @@ namespace DentalVision.Application.Interfaces
 {
     public interface IReportService
     {
+        Task<IEnumerable<ClinicalReportDto>> GetAllReportsAsync();
         Task<ClinicalReportDto?> GetReportByIdAsync(int id);
         Task<ClinicalReportDto?> GetReportByAnalysisIdAsync(int analysisId);
         Task<IEnumerable<ClinicalReportDto>> GetReportsByPatientIdAsync(int patientId);

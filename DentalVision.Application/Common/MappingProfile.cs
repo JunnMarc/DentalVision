@@ -21,6 +21,8 @@ namespace DentalVision.Application.Common
             CreateMap<Appointment, AppointmentDto>()
                 .ForMember(dest => dest.PatientName, opt => opt.MapFrom(src => src.Patient.FirstName + " " + src.Patient.LastName))
                 .ForMember(dest => dest.PatientPhone, opt => opt.MapFrom(src => src.Patient.Phone))
+                .ForMember(dest => dest.PatientEmail, opt => opt.MapFrom(src => src.Patient.Email))
+                .ForMember(dest => dest.IsPatientProfileCompleted, opt => opt.MapFrom(src => src.Patient.IsProfileCompleted))
                 .ForMember(dest => dest.DentistName, opt => opt.MapFrom(src => src.Dentist.User.FirstName + " " + src.Dentist.User.LastName));
             CreateMap<CreateAppointmentDto, Appointment>();
 

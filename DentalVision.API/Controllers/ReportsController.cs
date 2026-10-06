@@ -18,6 +18,13 @@ namespace DentalVision.API.Controllers
             _reportService = reportService;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var reports = await _reportService.GetAllReportsAsync();
+            return Ok(reports);
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {

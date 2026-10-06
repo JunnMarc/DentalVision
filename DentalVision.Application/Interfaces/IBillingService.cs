@@ -6,6 +6,7 @@ namespace DentalVision.Application.Interfaces
 {
     public interface IBillingService
     {
+        Task<IEnumerable<InvoiceDto>> GetAllInvoicesAsync();
         Task<InvoiceDto?> GetInvoiceByIdAsync(int id);
         Task<IEnumerable<InvoiceDto>> GetInvoicesByPatientIdAsync(int patientId);
         Task<InvoiceDto> CreateInvoiceAsync(CreateInvoiceDto request);

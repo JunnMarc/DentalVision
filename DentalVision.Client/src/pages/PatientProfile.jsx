@@ -1,21 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import {
+  FaUser,
+  FaFolderOpen,
+  FaFileInvoiceDollar,
+  FaCamera,
+  FaFilePdf,
+  FaEdit,
+  FaTooth,
+  FaCheckCircle
+} from 'react-icons/fa';
 import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { useForm } from 'react-hook-form';
-import { 
-  FaUser, 
-  FaFolderOpen, 
-  FaCalendarAlt, 
-  FaFileInvoiceDollar, 
-  FaCamera, 
-  FaPlus,
-  FaFilePdf
-} from 'react-icons/fa';
-import { Line } from 'react-chartjs-2';
+import PageHeader from '../components/common/PageHeader';
+import ProfileSummaryCard from '../components/profile/ProfileSummaryCard';
+import AllergiesMedicalPanel from '../components/profile/AllergiesMedicalPanel';
+import StatusBadge from '../components/common/StatusBadge';
+import Modal from '../components/common/Modal';
 import OdontogramChart from '../components/OdontogramChart';
 
-const PatientProfile = () => {
+export const PatientProfile = () => {
   const { id } = useParams();
   const { hasRole } = useAuth();
   const [patient, setPatient] = useState(null);
@@ -48,39 +53,37 @@ const PatientProfile = () => {
 
   const fetchPatientData = async () => {
     try {
+      setLoading(true);
       const patientRes = await api.get(`/patients/${id}`);
-      setPatient(patientRes.data);
+      const p = patientRes.data;
+      setPatient(p);
 
-      // Populate edit form defaults
-      setValue("firstName", patientRes.data.firstName);
-      setValue("lastName", patientRes.data.lastName);
-      setValue("dateOfBirth", patientRes.data.dateOfBirth ? patientRes.data.dateOfBirth.split('T')[0] : '2000-01-01');
-      setValue("gender", patientRes.data.gender || 'Male');
-      setValue("phone", patientRes.data.phone || '');
-      setValue("email", patientRes.data.email || '');
-      setValue("address", patientRes.data.address || '');
-      setValue("medicalHistory", patientRes.data.medicalHistory || '');
+      setValue("firstName", p.firstName);
+      setValue("lastName", p.lastName);
+      setValue("dateOfBirth", p.dateOfBirth ? p.dateOfBirth.split('T')[0] : '');
+      setValue("gender", p.gender || 'Male');
+      setValue("phone", p.phone || '');
+      setValue("email", p.email || '');
+      setValue("address", p.address || '');
+      setValue("medicalHistory", p.medicalHistory || '');
+      setValue("allergies", p.allergies || '');
+      setValue("emergencyContactName", p.emergencyContactName || '');
+      setValue("emergencyContactPhone", p.emergencyContactPhone || '');
 
-      // Fetch reports
-      const reportsRes = await api.get(`/reports/patient/${id}`);
-      setReports(reportsRes.data);
+      // Reports
+      try {
+        const reportsRes = await api.get(`/reports/patient/${id}`);
+        setReports(reportsRes.data);
+      } catch (e) {}
 
-      // Fetch invoices
-      const invoicesRes = await api.get(`/billing/invoices/patient/${id}`);
-      setInvoices(invoicesRes.data);
-
-      const reportsData = reportsRes.data;
-      const imagesList = reportsData.map((rep, idx) => ({
-        id: rep.analysisId,
-        filePath: `/uploads/dental_plaque_disclosed_${idx + 1}.png`,
-        uploadedAt: rep.reportDate,
-        notes: "Disclosing dye evaluation.",
-        coveragePercentage: rep.coveragePercentage
-      }));
-      setImages(imagesList);
+      // Invoices
+      try {
+        const invoicesRes = await api.get(`/billing/invoices/patient/${id}`);
+        setInvoices(invoicesRes.data);
+      } catch (e) {}
 
     } catch (error) {
-      console.error("Error loading patient profile datasets:", error);
+      console.error("Error loading patient profile:", error);
     } finally {
       setLoading(false);
     }
@@ -102,562 +105,276 @@ const PatientProfile = () => {
   };
 
   if (loading) {
-    return <div className="text-center py-5"><div className="spinner-border text-primary" role="status"></div></div>;
+    return (
+      <div className="container-fluid p-5 text-center">
+        <div className="spinner-border text-primary mx-auto mb-2" role="status" />
+        <div className="small text-muted">Loading patient chart...</div>
+      </div>
+    );
   }
 
-  // Plaque Trends Chart Data
-  const trendDataSorted = [...reports].sort((a, b) => new Date(a.reportDate) - new Date(b.reportDate));
-  const plaqueChartData = {
-    labels: trendDataSorted.map(r => new Date(r.reportDate).toLocaleDateString()) || [],
-    datasets: [
-      {
-        label: 'Plaque Coverage (%)',
-        data: trendDataSorted.map(r => r.coveragePercentage) || [],
-        borderColor: '#EF4444',
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-        tension: 0.2,
-        fill: true
-      }
-    ]
-  };
+  if (!patient) {
+    return (
+      <div className="container-fluid p-5 text-center">
+        <h5 className="text-danger font-weight-bold">Patient Record Not Found</h5>
+        <Link to="/patients" className="btn btn-sm btn-primary mt-3">← Return to Patient List</Link>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h3 className="font-weight-bold m-0">Patient Profile</h3>
-        {hasRole(['Dentist']) && (
-          <Link to={`/plaque/upload?patientId=${id}`} className="btn btn-primary-clinic d-flex align-items-center gap-2">
-            <FaCamera /> Upload Dental Image
-          </Link>
-        )}
-      </div>
-
-      <div className="row g-4">
-        {/* Left Column: Profile Card & Plaque History Chart */}
-        <div className="col-md-4">
-          {/* Profile Details Card */}
-          <div className="clinic-card mb-4 text-center">
-            <div className="avatar bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style={{ width: 80, height: 80, backgroundColor: '#2563EB' }}>
-              <FaUser size={36} />
-            </div>
-            <h4 className="font-weight-bold mb-1">{patient?.firstName} {patient?.lastName}</h4>
-            <span className="badge bg-light text-secondary mb-3">Patient ID: #{patient?.id}</span>
-
-            <div className="text-start border-top pt-3 small mb-3">
-              <div className="mb-2">
-                <strong>DOB:</strong> {
-                  patient?.dateOfBirth && 
-                  new Date(patient.dateOfBirth).getFullYear() === 2000 && 
-                  new Date(patient.dateOfBirth).getMonth() === 0 && 
-                  new Date(patient.dateOfBirth).getDate() === 1
-                    ? "Not provided yet"
-                    : patient?.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString() : 'N/A'
-                }
-              </div>
-              <div className="mb-2"><strong>Gender:</strong> {patient?.gender || 'Not provided yet'}</div>
-              <div className="mb-2">
-                <strong>Phone:</strong> {patient?.phone === '0000000000' ? 'Not provided yet' : patient?.phone}
-              </div>
-              <div className="mb-2"><strong>Email:</strong> {patient?.email || 'Not provided yet'}</div>
-              <div className="mb-2"><strong>Address:</strong> {patient?.address || 'Not provided yet'}</div>
-            </div>
-
+    <div className="container-fluid p-4 animate-fade-in" style={{ maxWidth: '1440px' }}>
+      {/* Page Header */}
+      <PageHeader
+        title={`${patient.firstName} ${patient.lastName}`}
+        subtitle={`Patient ID: ${patient.patientCode || `PAT-00${patient.id}`} • Registered Chart Record`}
+        icon={FaUser}
+        actions={
+          <div className="d-flex align-items-center gap-2">
+            <StatusBadge type="profile" isProfileCompleted={patient.isProfileCompleted} />
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1.5 px-3 py-1.5 font-weight-bold"
+              onClick={() => setShowEditModal(true)}
+            >
+              <FaEdit size={12} /> Edit Profile
+            </button>
             {hasRole(['Dentist', 'Dental Staff']) && (
-              <button 
-                className="btn btn-sm btn-outline-primary w-100 py-1"
-                onClick={() => setShowEditModal(true)}
-                style={{ fontSize: 11 }}
+              <Link
+                to="/upload-image"
+                state={{ patientId: patient.id }}
+                className="btn btn-sm btn-primary d-flex align-items-center gap-1.5 px-3 py-1.5 font-weight-bold shadow-sm"
               >
-                Edit Personal Info
-              </button>
+                <FaCamera size={12} /> Upload Plaque Scan
+              </Link>
             )}
           </div>
+        }
+      />
 
-          {/* Medical History */}
-          <div className="clinic-card">
-            <h5 className="font-weight-bold mb-3">Clinical Alert & History</h5>
-            <div className="alert alert-warning p-2 small border-0 mb-0" style={{ backgroundColor: '#fffbeb', color: '#b45309' }}>
-              <strong>Medical History:</strong>
-              <p className="m-0 mt-1">{patient?.medicalHistory || 'No declared allergies or medical conditions yet.'}</p>
-            </div>
+      {/* Navigation Tabs */}
+      <div className="card shadow-sm border-0 mb-4 bg-white" style={{ borderRadius: '16px' }}>
+        <div className="card-body p-2">
+          <div className="nav nav-pills nav-fill gap-2" role="tablist">
+            <button
+              type="button"
+              onClick={() => setActiveTab('records')}
+              className={`nav-link py-2 font-weight-bold d-flex align-items-center justify-content-center gap-2 ${activeTab === 'records' ? 'active bg-primary text-white shadow-sm' : 'text-muted'}`}
+              style={{ borderRadius: '12px' }}
+            >
+              <FaFolderOpen /> Clinical Chart & Records
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('odontogram')}
+              className={`nav-link py-2 font-weight-bold d-flex align-items-center justify-content-center gap-2 ${activeTab === 'odontogram' ? 'active bg-primary text-white shadow-sm' : 'text-muted'}`}
+              style={{ borderRadius: '12px' }}
+            >
+              <FaTooth /> Interactive Odontogram (FDI)
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('billing')}
+              className={`nav-link py-2 font-weight-bold d-flex align-items-center justify-content-center gap-2 ${activeTab === 'billing' ? 'active bg-primary text-white shadow-sm' : 'text-muted'}`}
+              style={{ borderRadius: '12px' }}
+            >
+              <FaFileInvoiceDollar /> Billing Statements ({invoices.length})
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Right Column: Analytics, Images, Clinical Reports, Billing */}
-        <div className="col-md-8">
-          {/* Tab Navigation */}
-          <div className="d-flex border-bottom mb-4 gap-3">
-            <button 
-              className={`pb-2 px-1 font-weight-bold btn btn-link border-0 text-decoration-none ${activeTab === 'records' ? 'text-teal border-bottom border-teal border-2 fw-bold' : 'text-muted'}`}
-              onClick={() => setActiveTab('records')}
-              style={{ background: 'none', color: activeTab === 'records' ? '#0D9488' : '#64748B', borderBottom: activeTab === 'records' ? '2px solid #0D9488' : 'none', paddingBottom: '8px' }}
-            >
-              Clinical Records & Analytics
-            </button>
-            <button 
-              className={`pb-2 px-1 font-weight-bold btn btn-link border-0 text-decoration-none ${activeTab === 'odontogram' ? 'text-teal border-bottom border-teal border-2 fw-bold' : 'text-muted'}`}
-              onClick={() => setActiveTab('odontogram')}
-              style={{ background: 'none', color: activeTab === 'odontogram' ? '#0D9488' : '#64748B', borderBottom: activeTab === 'odontogram' ? '2px solid #0D9488' : 'none', paddingBottom: '8px' }}
-            >
-              Interactive Odontogram Chart
-            </button>
-            <button 
-              className={`pb-2 px-1 font-weight-bold btn btn-link border-0 text-decoration-none ${activeTab === 'comparison' ? 'text-teal border-bottom border-teal border-2 fw-bold' : 'text-muted'}`}
-              onClick={() => setActiveTab('comparison')}
-              style={{ background: 'none', color: activeTab === 'comparison' ? '#0D9488' : '#64748B', borderBottom: activeTab === 'comparison' ? '2px solid #0D9488' : 'none', paddingBottom: '8px' }}
-            >
-              Side-by-Side Plaque Comparison
-            </button>
+      {/* TAB CONTENT 1: Clinical Records */}
+      {activeTab === 'records' && (
+        <div className="row g-4">
+          <div className="col-lg-5">
+            <ProfileSummaryCard profile={patient} />
+            <AllergiesMedicalPanel
+              allergies={patient.allergies}
+              medicalHistory={patient.medicalHistory}
+              isEditable={true}
+              onEditClick={() => setShowEditModal(true)}
+            />
           </div>
 
-          {activeTab === 'records' && (
-            <>
-              {/* Plaque Trends Graph */}
-              {reports.length > 0 && (
-                <div className="clinic-card mb-4 shadow-sm">
-                  <h5 className="font-weight-bold mb-3">Gumline Plaque Accumulation Trend</h5>
-                  <div style={{ height: '220px' }}>
-                    <Line data={plaqueChartData} options={{ responsive: true, maintainAspectRatio: false }} />
-                  </div>
+          <div className="col-lg-7">
+            {/* Clinical Reports */}
+            <div className="card shadow-sm border-0 p-4 bg-white text-start" style={{ borderRadius: '16px' }}>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5 className="font-weight-bold text-dark mb-0">Clinical Assessment Reports</h5>
+                <span className="badge bg-light text-muted border">{reports.length} report{reports.length !== 1 ? 's' : ''}</span>
+              </div>
+
+              {reports.length === 0 ? (
+                <div className="text-center py-4 bg-light rounded text-muted small">
+                  No clinical assessment reports on file for this patient.
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-hover align-middle mb-0" style={{ fontSize: '13px' }}>
+                    <thead className="table-light">
+                      <tr>
+                        <th>Report ID</th>
+                        <th>Attending Clinician</th>
+                        <th>Date</th>
+                        <th>Plaque %</th>
+                        <th>Status</th>
+                        <th className="text-end">Export</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reports.map((r) => (
+                        <tr key={r.id}>
+                          <td className="font-weight-bold text-primary">#REP-00{r.id}</td>
+                          <td>{r.dentistName}</td>
+                          <td className="text-muted">{new Date(r.reportDate).toLocaleDateString()}</td>
+                          <td className="font-weight-bold text-danger">{r.coveragePercentage?.toFixed(1) || 0}%</td>
+                          <td>
+                            <span className={`badge ${r.approvalStatus === 'Approved' ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'} px-2 py-1`}>
+                              ● {r.approvalStatus}
+                            </span>
+                          </td>
+                          <td className="text-end">
+                            <button
+                              type="button"
+                              onClick={() => handleExportPDF(r.id)}
+                              disabled={exportingId === r.id}
+                              className="btn btn-sm btn-outline-danger px-2.5 py-1 d-inline-flex align-items-center gap-1"
+                              style={{ fontSize: '11.5px' }}
+                            >
+                              <FaFilePdf /> {exportingId === r.id ? 'Exporting...' : 'PDF'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
-
-              {/* Dental Images List */}
-              <div className="clinic-card mb-4 shadow-sm">
-                <h5 className="font-weight-bold mb-3">Dental Plaque Image Mapping History</h5>
-                {images.length === 0 ? (
-                  <p className="text-muted small">No dental images uploaded yet.</p>
-                ) : (
-                  <div className="row g-3">
-                    {images.map(img => (
-                      <div key={img.id} className="col-md-4">
-                        <div className="border rounded p-2 text-center bg-light">
-                          <div className="bg-secondary rounded mb-2 d-flex align-items-center justify-content-center text-white font-weight-bold" style={{ height: 100, fontSize: 24, background: 'linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)' }}>
-                            {img.coveragePercentage}%
-                          </div>
-                          <div className="small font-weight-bold mb-1">Plaque Detected</div>
-                          <div className="xsmall text-muted mb-2">{new Date(img.uploadedAt).toLocaleDateString()}</div>
-                          {hasRole(['Dentist']) && (
-                            <Link to={`/plaque/validate/${img.id}`} className="btn btn-xs btn-outline-primary w-100 py-1" style={{ fontSize: 11 }}>
-                              Map & Validate
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Clinical Reports */}
-              <div className="clinic-card mb-4 shadow-sm">
-                <h5 className="font-weight-bold mb-3">Clinical Assessment Reports</h5>
-                {reports.length === 0 ? (
-                  <p className="text-muted small">No reports generated yet.</p>
-                ) : (
-                  <div className="table-responsive">
-                    <table className="table table-hover table-clinic align-middle">
-                      <thead>
-                        <tr>
-                          <th>Date</th>
-                          <th>Dentist</th>
-                          <th>Plaque %</th>
-                          <th>Status</th>
-                          <th>Export</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reports.map(r => (
-                          <tr key={r.id}>
-                            <td>{new Date(r.reportDate).toLocaleDateString()}</td>
-                            <td>{r.dentistName}</td>
-                            <td><span className="font-weight-bold text-danger">{r.coveragePercentage}%</span></td>
-                            <td>
-                              <span className="font-weight-bold" style={{ 
-                                color: r.approvalStatus === 'Approved' ? '#059669' : '#475569',
-                                fontSize: '13px'
-                                }}>
-                                ● {r.approvalStatus}
-                              </span>
-                            </td>
-                             <td>
-                               <button 
-                                 onClick={() => handleExportPDF(r.id)} 
-                                 className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                                 disabled={exportingId === r.id}
-                               >
-                                 <FaFilePdf /> {exportingId === r.id ? 'Loading...' : 'PDF'}
-                               </button>
-                             </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* Billing & Invoice History */}
-              <div className="clinic-card shadow-sm">
-                <h5 className="font-weight-bold mb-3">Billing & Payments Ledger</h5>
-                {invoices.length === 0 ? (
-                  <p className="text-muted small">No invoice records found.</p>
-                ) : (
-                  <div className="table-responsive">
-                    <table className="table table-hover table-clinic align-middle">
-                      <thead>
-                        <tr>
-                          <th>Invoice ID</th>
-                          <th>Date</th>
-                          <th className="text-end">Total</th>
-                          <th className="text-end">Balance Due</th>
-                          <th className="ps-4">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {invoices.map(inv => (
-                          <tr key={inv.id}>
-                            <td className="font-weight-bold">#INV-00{inv.id}</td>
-                            <td>{new Date(inv.invoiceDate).toLocaleDateString()}</td>
-                            <td className="text-end">₱{inv.grandTotal?.toFixed(2)}</td>
-                            <td className="text-end">₱{inv.balanceDue?.toFixed(2)}</td>
-                            <td className="ps-4">
-                              <span className="font-weight-bold" style={{ 
-                                color: inv.paymentStatus === 'Paid' || inv.paymentStatus === 2 ? '#059669' :
-                                       inv.paymentStatus === 'PartiallyPaid' || inv.paymentStatus === 1 ? '#D97706' :
-                                       '#DC2626',
-                                fontSize: '13px'
-                              }}>
-                                ● {inv.paymentStatus === 0 ? 'Unpaid' : inv.paymentStatus === 1 ? 'Partially Paid' : inv.paymentStatus === 2 ? 'Paid' : inv.paymentStatus}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {activeTab === 'odontogram' && (
-            <OdontogramChart patientId={id} />
-          )}
-
-          {activeTab === 'comparison' && (
-            <PlaqueComparisonView reports={reports} />
-          )}
-
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const PlaqueCanvas = ({ imageUrl, mappings }) => {
-  const canvasRef = React.useRef(null);
-
-  React.useEffect(() => {
-    if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-
-    const img = new Image();
-    const fullUrl = imageUrl && imageUrl.startsWith('/uploads') 
-      ? `http://localhost:5098${imageUrl}` 
-      : imageUrl;
-
-    img.src = fullUrl || '';
-    img.crossOrigin = 'anonymous';
-
-    img.onload = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      mappings.forEach(m => {
-        try {
-          const coords = JSON.parse(m.coordinatesJson);
-          if (Array.isArray(coords) && coords.length > 0) {
-            ctx.fillStyle = m.plaqueLevel === 'High' 
-              ? 'rgba(239, 68, 68, 0.42)' 
-              : m.plaqueLevel === 'Medium' 
-                ? 'rgba(245, 158, 11, 0.42)' 
-                : 'rgba(20, 184, 166, 0.38)';
-            
-            ctx.beginPath();
-            coords.forEach((pt, idx) => {
-              const scaleX = canvas.width / 600;
-              const scaleY = canvas.height / 400;
-              if (idx === 0) ctx.moveTo(pt.x * scaleX, pt.y * scaleY);
-              else ctx.lineTo(pt.x * scaleX, pt.y * scaleY);
-            });
-            ctx.closePath();
-            ctx.fill(); // Fill only, no outline stroke to remove mesh clutter
-
-            // Calculate center of the contour for labeling
-            const scaleX = canvas.width / 600;
-            const scaleY = canvas.height / 400;
-            const sumX = coords.reduce((sum, pt) => sum + pt.x, 0);
-            const sumY = coords.reduce((sum, pt) => sum + pt.y, 0);
-            const cx = (sumX / coords.length) * scaleX;
-            const cy = (sumY / coords.length) * scaleY;
-
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowColor = '#000000';
-            ctx.shadowBlur = 3;
-            ctx.shadowOffsetX = 1;
-            ctx.shadowOffsetY = 1;
-            ctx.font = 'bold 11px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(m.toothNumber.toString(), cx, cy);
-            
-            // Reset styles
-            ctx.shadowBlur = 0;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'alphabetic';
-          }
-        } catch (err) {}
-      });
-    };
-
-    img.onerror = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 10, canvas.width/2, canvas.height/2, canvas.width);
-      grad.addColorStop(0, '#e2e8f0');
-      grad.addColorStop(1, '#cbd5e1');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      ctx.fillStyle = '#64748b';
-      ctx.font = 'bold 13px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('[ Dental Image Not Found ]', canvas.width/2, canvas.height/2 - 10);
-      
-      ctx.textAlign = 'left';
-      mappings.forEach(m => {
-        try {
-          const coords = JSON.parse(m.coordinatesJson);
-          if (Array.isArray(coords) && coords.length > 0) {
-            ctx.fillStyle = 'rgba(239, 68, 68, 0.45)';
-            ctx.strokeStyle = '#ef4444';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            coords.forEach((pt, idx) => {
-              const scaleX = canvas.width / 600;
-              const scaleY = canvas.height / 400;
-              if (idx === 0) ctx.moveTo(pt.x * scaleX, pt.y * scaleY);
-              else ctx.lineTo(pt.x * scaleX, pt.y * scaleY);
-            });
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-
-            const scaleX = canvas.width / 600;
-            const scaleY = canvas.height / 400;
-            ctx.fillStyle = '#1e293b';
-            ctx.font = 'bold 10px sans-serif';
-            ctx.fillText(`Tooth ${m.toothNumber}`, coords[0].x * scaleX, coords[0].y * scaleY - 5);
-          }
-        } catch (err) {}
-      });
-    };
-  }, [imageUrl, mappings]);
-
-  return (
-    <canvas 
-      ref={canvasRef} 
-      width={280} 
-      height={200} 
-      className="border rounded bg-light shadow-sm"
-      style={{ width: '100%', height: 'auto', display: 'block' }}
-    />
-  );
-};
-
-const PlaqueComparisonView = ({ reports }) => {
-  const [id1, setId1] = useState('');
-  const [id2, setId2] = useState('');
-  const [data1, setData1] = useState(null);
-  const [data2, setData2] = useState(null);
-  const [loading1, setLoading1] = useState(false);
-  const [loading2, setLoading2] = useState(false);
-
-  useEffect(() => {
-    if (!id1) {
-      setData1(null);
-      return;
-    }
-    setLoading1(true);
-    api.get(`/plaque/analysis/${id1}`)
-      .then(res => setData1(res.data))
-      .catch(err => console.error(err))
-      .finally(() => setLoading1(false));
-  }, [id1]);
-
-  useEffect(() => {
-    if (!id2) {
-      setData2(null);
-      return;
-    }
-    setLoading2(true);
-    api.get(`/plaque/analysis/${id2}`)
-      .then(res => setData2(res.data))
-      .catch(err => console.error(err))
-      .finally(() => setLoading2(false));
-  }, [id2]);
-
-  return (
-    <div className="clinic-card shadow-sm">
-      <h5 className="font-weight-bold mb-3 text-teal" style={{ color: '#0D9488' }}>
-        Side-by-Side Plaque Comparison
-      </h5>
-      <p className="text-muted small mb-4">
-        Select two plaque analysis dates below to visually compare patient gumline progression, treatment effectiveness, and coverage maps side-by-side.
-      </p>
-
-      <div className="row g-4">
-        {/* Left Box (Past Visit) */}
-        <div className="col-md-6">
-          <div className="border rounded p-3 bg-light">
-            <label className="form-label small font-weight-bold">Select Visit 1 (Baseline)</label>
-            <select 
-              className="form-select form-select-sm mb-3"
-              value={id1}
-              onChange={(e) => setId1(e.target.value)}
-            >
-              <option value="">-- Choose Visit 1 --</option>
-              {reports.map(r => (
-                <option key={r.id} value={r.analysisId}>
-                  {new Date(r.reportDate).toLocaleDateString()} - {r.coveragePercentage}% Plaque
-                </option>
-              ))}
-            </select>
-
-            {loading1 ? (
-              <div className="text-center py-4"><div className="spinner-border spinner-border-sm text-primary" role="status"></div></div>
-            ) : data1 ? (
-              <div>
-                <PlaqueCanvas 
-                  imageUrl={data1.imageId ? `/api/plaque/analysis/image/${data1.imageId}` : ''} 
-                  mappings={data1.mappings || []} 
-                />
-                <div className="mt-3 small border-top pt-2">
-                  <div><strong>Analysis Date:</strong> {new Date(data1.createdAt).toLocaleDateString()}</div>
-                  <div><strong>Plaque Coverage:</strong> <span className="badge bg-danger">{data1.coveragePercentage}%</span></div>
-                  <div><strong>AI Confidence:</strong> {data1.confidenceScore}</div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center text-muted py-5 border rounded bg-white small">
-                Choose a visit date from the menu above to render baseline canvas.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right Box (Current Visit) */}
-        <div className="col-md-6">
-          <div className="border rounded p-3 bg-light">
-            <label className="form-label small font-weight-bold">Select Visit 2 (Follow-up)</label>
-            <select 
-              className="form-select form-select-sm mb-3"
-              value={id2}
-              onChange={(e) => setId2(e.target.value)}
-            >
-              <option value="">-- Choose Visit 2 --</option>
-              {reports.map(r => (
-                <option key={r.id} value={r.analysisId}>
-                  {new Date(r.reportDate).toLocaleDateString()} - {r.coveragePercentage}% Plaque
-                </option>
-              ))}
-            </select>
-
-            {loading2 ? (
-              <div className="text-center py-4"><div className="spinner-border spinner-border-sm text-primary" role="status"></div></div>
-            ) : data2 ? (
-              <div>
-                <PlaqueCanvas 
-                  imageUrl={data2.imageId ? `/api/plaque/analysis/image/${data2.imageId}` : ''} 
-                  mappings={data2.mappings || []} 
-                />
-                <div className="mt-3 small border-top pt-2">
-                  <div><strong>Analysis Date:</strong> {new Date(data2.createdAt).toLocaleDateString()}</div>
-                  <div><strong>Plaque Coverage:</strong> <span className="badge bg-danger">{data2.coveragePercentage}%</span></div>
-                  <div><strong>AI Confidence:</strong> {data2.confidenceScore}</div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center text-muted py-5 border rounded bg-white small">
-                Choose a visit date from the menu above to render follow-up canvas.
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Edit Patient Details Modal */}
-      {showEditModal && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content" style={{ borderRadius: '16px', overflow: 'hidden' }}>
-              <div className="modal-header bg-teal text-white border-0 py-3" style={{ backgroundColor: '#0D9488' }}>
-                <h5 className="modal-title font-weight-bold text-white">Edit Patient Record</h5>
-                <button type="button" className="btn-close btn-close-white" onClick={() => setShowEditModal(false)}></button>
-              </div>
-              <form onSubmit={handleSubmit(onEditSubmit)}>
-                <div className="modal-body p-4 text-start">
-                  <div className="row g-3">
-                    <div className="col-6">
-                      <label className="form-label small font-weight-bold">First Name</label>
-                      <input type="text" className="form-control" {...register("firstName", { required: true })} />
-                    </div>
-                    <div className="col-6">
-                      <label className="form-label small font-weight-bold">Last Name</label>
-                      <input type="text" className="form-control" {...register("lastName", { required: true })} />
-                    </div>
-                    <div className="col-6">
-                      <label className="form-label small font-weight-bold">Date of Birth</label>
-                      <input type="date" className="form-control" {...register("dateOfBirth", { required: true })} />
-                    </div>
-                    <div className="col-6">
-                      <label className="form-label small font-weight-bold">Gender</label>
-                      <select className="form-select" {...register("gender")}>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-                    <div className="col-12">
-                      <label className="form-label small font-weight-bold">Phone Number</label>
-                      <input type="tel" className="form-control" {...register("phone", { required: true })} />
-                    </div>
-                    <div className="col-12">
-                      <label className="form-label small font-weight-bold">Email Address</label>
-                      <input type="email" className="form-control" {...register("email")} readOnly disabled />
-                    </div>
-                    <div className="col-12">
-                      <label className="form-label small font-weight-bold">Address</label>
-                      <input type="text" className="form-control" {...register("address")} />
-                    </div>
-                    <div className="col-12">
-                      <label className="form-label small font-weight-bold">Medical History / Allergies</label>
-                      <textarea className="form-control" rows="3" placeholder="Specify drug allergies, existing medical conditions..." {...register("medicalHistory")}></textarea>
-                    </div>
-                  </div>
-                </div>
-                <div className="modal-footer border-0 p-3 bg-light">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary" style={{ backgroundColor: '#0D9488', borderColor: '#0D9488' }}>Save Changes</button>
-                </div>
-              </form>
             </div>
           </div>
         </div>
       )}
+
+      {/* TAB CONTENT 2: Odontogram FDI Chart */}
+      {activeTab === 'odontogram' && (
+        <div className="card shadow-sm border-0 p-4 bg-white" style={{ borderRadius: '16px' }}>
+          <OdontogramChart patientId={id} />
+        </div>
+      )}
+
+      {/* TAB CONTENT 3: Billing Statements */}
+      {activeTab === 'billing' && (
+        <div className="card shadow-sm border-0 p-4 bg-white text-start" style={{ borderRadius: '16px' }}>
+          <h5 className="font-weight-bold text-dark mb-3">Patient Invoices & Payment Receipts</h5>
+
+          {invoices.length === 0 ? (
+            <div className="text-center py-4 bg-light rounded text-muted small">
+              No invoices generated for this patient yet.
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-hover align-middle mb-0" style={{ fontSize: '13px' }}>
+                <thead className="table-light">
+                  <tr>
+                    <th>Invoice ID</th>
+                    <th>Date</th>
+                    <th>Total Billed</th>
+                    <th>Balance Due</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoices.map((inv) => (
+                    <tr key={inv.id}>
+                      <td className="font-weight-bold text-primary">INV-00{inv.id}</td>
+                      <td className="text-muted">{new Date(inv.invoiceDate).toLocaleDateString()}</td>
+                      <td className="font-weight-bold">₱{inv.grandTotal?.toFixed(2)}</td>
+                      <td className={`font-weight-bold ${inv.balanceDue > 0 ? 'text-danger' : 'text-success'}`}>
+                        ₱{inv.balanceDue?.toFixed(2)}
+                      </td>
+                      <td>
+                        <StatusBadge type="payment" status={inv.paymentStatus} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Edit Profile Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="Edit Patient Chart Record"
+        subtitle={`Updating info for ${patient.firstName} ${patient.lastName}`}
+        icon={FaEdit}
+        size="lg"
+      >
+        <form onSubmit={handleSubmit(onEditSubmit)}>
+          <div className="row g-3 text-start">
+            <div className="col-md-6">
+              <label className="form-label small font-weight-bold">First Name <span className="text-danger">*</span></label>
+              <input type="text" className="form-control" {...register("firstName", { required: true })} />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label small font-weight-bold">Last Name <span className="text-danger">*</span></label>
+              <input type="text" className="form-control" {...register("lastName", { required: true })} />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label small font-weight-bold">Date of Birth</label>
+              <input type="date" className="form-control" {...register("dateOfBirth")} />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label small font-weight-bold">Gender</label>
+              <select className="form-select" {...register("gender")}>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div className="col-md-6">
+              <label className="form-label small font-weight-bold">Phone Number</label>
+              <input type="tel" className="form-control" {...register("phone")} />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label small font-weight-bold">Email Address</label>
+              <input type="email" className="form-control" {...register("email")} />
+            </div>
+            <div className="col-12">
+              <label className="form-label small font-weight-bold">Address</label>
+              <input type="text" className="form-control" {...register("address")} />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label small font-weight-bold text-danger">Known Allergies</label>
+              <input type="text" className="form-control border-danger-subtle" {...register("allergies")} placeholder="e.g. Penicillin, Latex" />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label small font-weight-bold">Medical History</label>
+              <input type="text" className="form-control" {...register("medicalHistory")} placeholder="e.g. Hypertension" />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label small font-weight-bold">Emergency Contact Name</label>
+              <input type="text" className="form-control" {...register("emergencyContactName")} />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label small font-weight-bold">Emergency Contact Phone</label>
+              <input type="tel" className="form-control" {...register("emergencyContactPhone")} />
+            </div>
+            <div className="col-12 text-end mt-4">
+              <button type="button" className="btn btn-outline-secondary me-2 px-3" onClick={() => setShowEditModal(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary px-4 font-weight-bold">
+                Save Changes ✓
+              </button>
+            </div>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

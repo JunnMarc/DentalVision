@@ -13,7 +13,7 @@ namespace DentalVision.Domain.Entities
         public string LastName { get; set; } = string.Empty;
 
         [Column("BirthDate")]
-        public DateTime DateOfBirth { get; set; }
+        public DateTime? DateOfBirth { get; set; }
         public string? Gender { get; set; }
 
         [Column("ContactNumber")]
@@ -21,6 +21,10 @@ namespace DentalVision.Domain.Entities
         public string? Email { get; set; }
         public string? Address { get; set; }
         public string? MedicalHistory { get; set; }
+        public string? Allergies { get; set; }
+        public string? EmergencyContactName { get; set; }
+        public string? EmergencyContactPhone { get; set; }
+        public bool IsProfileCompleted { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties

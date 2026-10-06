@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ namespace DentalVision.API.Middleware
     public class MultiTenantMiddleware
     {
         private readonly RequestDelegate _next;
+        private static readonly ConcurrentDictionary<string, (int Id, string Slug, bool IsActive)> _tenantCache = new();
 
         public MultiTenantMiddleware(RequestDelegate next)
         {
@@ -33,22 +35,33 @@ namespace DentalVision.API.Middleware
 
             if (!string.IsNullOrEmpty(tenantSlug))
             {
-                // Resolve DbContext to look up Tenant details without causing circular injection in scoped services
-                var dbContext = context.RequestServices.GetRequiredService<DentalVisionDbContext>();
-                var tenant = await dbContext.Tenants
-                    .FirstOrDefaultAsync(t => t.Slug.ToLower() == tenantSlug.ToLower());
+                var normalizedSlug = tenantSlug.ToLower();
 
-                if (tenant != null)
+                if (!_tenantCache.TryGetValue(normalizedSlug, out var cachedTenant))
                 {
-                    if (!tenant.IsActive)
+                    var dbContext = context.RequestServices.GetRequiredService<DentalVisionDbContext>();
+                    var tenant = await dbContext.Tenants
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(t => t.Slug.ToLower() == normalizedSlug);
+
+                    if (tenant != null)
+                    {
+                        cachedTenant = (tenant.Id, tenant.Slug, tenant.IsActive);
+                        _tenantCache[normalizedSlug] = cachedTenant;
+                    }
+                }
+
+                if (cachedTenant != default)
+                {
+                    if (!cachedTenant.IsActive)
                     {
                         context.Response.StatusCode = StatusCodes.Status403Forbidden;
                         await context.Response.WriteAsync("The requested dental clinic is suspended.");
                         return;
                     }
 
-                    context.Items["TenantId"] = tenant.Id;
-                    context.Items["TenantSlug"] = tenant.Slug;
+                    context.Items["TenantId"] = cachedTenant.Id;
+                    context.Items["TenantSlug"] = cachedTenant.Slug;
                 }
                 else
                 {

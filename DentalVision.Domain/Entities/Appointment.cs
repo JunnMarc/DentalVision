@@ -17,11 +17,14 @@ namespace DentalVision.Domain.Entities
         [Column("Purpose")]
         public string? Reason { get; set; }
         public string? Notes { get; set; }
+        public bool IsIntakeCompleted { get; set; } = false;
+        public string? IntakeNotes { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
         public virtual Patient Patient { get; set; } = null!;
         public virtual Dentist Dentist { get; set; } = null!;
         public virtual ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
+        public virtual ICollection<DentalImage> DentalImages { get; set; } = new List<DentalImage>();
     }
 }

@@ -16,8 +16,9 @@ namespace DentalVision.Infrastructure.Persistence
             bool needsRecreation = false;
             try
             {
-                // If Tenants table doesn't exist, this will throw an exception in the old database
-                _ = context.Tenants.Any();
+                // Verify new table columns exist
+                _ = context.Patients.Any(p => p.IsProfileCompleted);
+                _ = context.Appointments.Any(a => a.IsIntakeCompleted);
 
                 // If there's no system tenant slug, we force recreation to apply the new seed layout
                 if (!context.Tenants.Any(t => t.Slug == "system"))
@@ -219,18 +220,23 @@ namespace DentalVision.Infrastructure.Persistence
             var rand = new Random(42);
             for (int i = 0; i < 20; i++)
             {
+                var isCompleted = (i % 5 != 0);
                 var patient = new Patient
                 {
                     TenantId = 2,
                     PatientCode = $"PAT-00{i+1:D2}",
                     FirstName = firstNames[i],
                     LastName = lastNames[i],
-                    DateOfBirth = DateTime.UtcNow.AddYears(-rand.Next(18, 65)).AddDays(-rand.Next(1, 365)),
+                    DateOfBirth = isCompleted ? DateTime.UtcNow.AddYears(-rand.Next(18, 65)).AddDays(-rand.Next(1, 365)) : null,
                     Gender = genders[i],
                     Phone = $"+1-555-01{i:D2}",
                     Email = $"{firstNames[i].ToLower()}.{lastNames[i].ToLower()}@gmail.com",
-                    Address = $"{100 + i * 5} Maple Avenue, Suite {i + 1}",
-                    MedicalHistory = i % 4 == 0 ? "High blood pressure, Penicillin allergy." : "No significant medical history.",
+                    Address = isCompleted ? $"{100 + i * 5} Maple Avenue, Suite {i + 1}" : "",
+                    MedicalHistory = isCompleted ? (i % 4 == 0 ? "High blood pressure, Penicillin allergy." : "No significant medical history.") : "",
+                    Allergies = isCompleted ? (i % 4 == 0 ? "Penicillin, Latex" : "None known") : "",
+                    EmergencyContactName = isCompleted ? $"{lastNames[(i + 2) % lastNames.Length]} Family" : "",
+                    EmergencyContactPhone = isCompleted ? $"+1-555-99{i:D2}" : "",
+                    IsProfileCompleted = isCompleted,
                     CreatedAt = DateTime.UtcNow.AddMonths(-3)
                 };
                 patients.Add(patient);
@@ -251,6 +257,7 @@ namespace DentalVision.Infrastructure.Persistence
                 
                 // Spread appointments from 30 days ago to 10 days in the future
                 var appointmentDate = DateTime.Today.AddDays(-30 + (i * 4 / 5)).AddHours(9 + (i % 8));
+                var isIntakeDone = (i % 3 != 0);
 
                 var appointment = new Appointment
                 {
@@ -263,6 +270,8 @@ namespace DentalVision.Infrastructure.Persistence
                              (i % 3 == 1) ? "Cavity Filling on Lower Molar" :
                              "Plaque Mapping and Gum Assessment",
                     Notes = i % 5 == 0 ? "Patient reports sensitivity to cold liquids." : "",
+                    IsIntakeCompleted = isIntakeDone,
+                    IntakeNotes = isIntakeDone ? "Patient intake & health checklist confirmed." : "Awaiting clinic check-in / intake completion.",
                     CreatedAt = appointmentDate.AddDays(-5)
                 };
                 appointments.Add(appointment);

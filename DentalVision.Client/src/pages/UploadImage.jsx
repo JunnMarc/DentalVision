@@ -1,35 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { FaCloudUploadAlt, FaCamera, FaCheckCircle, FaExclamationCircle, FaMicroscope } from 'react-icons/fa';
 import api from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
-import { FaCloudUploadAlt, FaUser } from 'react-icons/fa';
+import usePatients from '../hooks/usePatients';
+import PageHeader from '../components/common/PageHeader';
+import PatientSearchInput from '../components/common/PatientSearchInput';
 
-const UploadImage = () => {
-  const [patients, setPatients] = useState([]);
+export const UploadImage = () => {
   const [searchParams] = useSearchParams();
-  const [selectedPatientId, setSelectedPatientId] = useState(searchParams.get('patientId') || '');
+  const patientIdParam = searchParams.get('patientId');
+  const navigate = useNavigate();
+
+  const { patients } = usePatients();
+  const [selectedPatient, setSelectedPatient] = useState(null);
   const [file, setFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [notes, setNotes] = useState('');
-  const [brightness, setBrightness] = useState(0);
-  const [contrast, setContrast] = useState(1.0);
-  const [denoise, setDenoise] = useState(3);
   const [uploading, setUploading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(0); // Ticker steps for clinical feedback
+  const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const response = await api.get('/patients');
-        setPatients(response.data);
-      } catch (error) {
-        console.error("Error loading patients list:", error);
-      }
-    };
-    fetchPatients();
-  }, []);
+    if (patientIdParam && patients.length > 0) {
+      const match = patients.find(p => String(p.id) === String(patientIdParam));
+      if (match) setSelectedPatient(match);
+    }
+  }, [patientIdParam, patients]);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -41,12 +37,12 @@ const UploadImage = () => {
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!selectedPatientId) {
-      setError("Please choose a patient.");
+    if (!selectedPatient) {
+      setError("Please choose a patient for this dental scan.");
       return;
     }
     if (!file) {
-      setError("Please select a dental image file.");
+      setError("Please select a dental scan photo.");
       return;
     }
 
@@ -56,113 +52,63 @@ const UploadImage = () => {
 
     const interval = setInterval(() => {
       setLoadingStep(prev => Math.min(3, prev + 1));
-    }, 1500);
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("patientId", parseInt(selectedPatientId));
-    formData.append("notes", notes);
-    formData.append("brightness", brightness);
-    formData.append("contrast", contrast);
-    formData.append("denoise", denoise);
+    }, 1200);
 
     try {
-      const response = await api.post('/plaque/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
+      const formData = new FormData();
+      formData.append('PatientId', selectedPatient.id);
+      formData.append('File', file);
+      if (notes) formData.append('Notes', notes);
+
+      const response = await api.post('/plaque/upload-and-analyze', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      clearInterval(interval);
+      navigate('/plaque-validation', {
+        state: {
+          analysisId: response.data.analysisId,
+          patientId: selectedPatient.id,
+          patientName: `${selectedPatient.firstName} ${selectedPatient.lastName}`
         }
       });
-      const analysisId = response.data.analysis.id;
-      // Auto redirect to validation interface
-      navigate(`/plaque/validate/${analysisId}`);
-    } catch (error) {
-      console.error("Upload failed:", error);
-      setError(error.response?.data?.message || "An error occurred during file upload.");
-    } finally {
+    } catch (err) {
       clearInterval(interval);
+      console.error("AI analysis failure:", err);
+      setError(err.response?.data?.message || "Failed to process dental scan with AI model.");
       setUploading(false);
     }
   };
 
   if (uploading) {
     return (
-      <div style={{ maxWidth: '600px', margin: '40px auto' }}>
-        <div className="clinic-card text-center p-5 bg-white shadow-lg" style={{ borderRadius: '16px', borderTop: '5px solid #0EA5E9' }}>
-          <div className="mb-4">
-            <div className="spinner-border text-primary" style={{ width: '4rem', height: '4rem', borderWidth: '0.4rem' }} role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
+      <div className="container-fluid p-5 d-flex align-items-center justify-content-center min-vh-75 animate-fade-in">
+        <div className="card shadow-sm border-0 p-5 text-center bg-white" style={{ borderRadius: '20px', maxWidth: '520px' }}>
+          <div
+            className="rounded-circle d-inline-flex align-items-center justify-content-center text-primary bg-primary-subtle mb-3"
+            style={{ width: '72px', height: '72px' }}
+          >
+            <FaMicroscope size={36} />
           </div>
-          
-          <h4 className="font-weight-bold mb-3" style={{ color: '#0F172A', fontFamily: 'Outfit, sans-serif' }}>
-            Scanning....
-          </h4>
-          
-          <p className="text-secondary small mb-4">
-            Our neural networks are processing your dental photo to isolate plaque boundaries and map tooth locations.
+          <h4 className="font-weight-bold text-dark mb-1">AI Plaque Segmentation Engine</h4>
+          <p className="text-muted small mb-4">
+            Processing disclosed clinical photo via DeepLabv3+ neural network pipeline...
           </p>
 
-          <div className="p-3 bg-light rounded text-start border" style={{ minHeight: '140px' }}>
-            <h6 className="xsmall text-muted font-weight-bold mb-3 uppercase" style={{ letterSpacing: '0.5px', fontSize: '9px' }}>
-              Execution Log
-            </h6>
-            
-            <div className="d-flex flex-column gap-2" style={{ fontSize: '13px' }}>
-              <div className="d-flex align-items-center gap-2">
-                <span className="text-success font-weight-bold">✓</span>
-                <span className="text-secondary">Image upload completed successfully.</span>
-              </div>
-
-              {loadingStep >= 1 ? (
-                <div className="d-flex align-items-center gap-2">
-                  <span className={loadingStep === 1 ? "spinner-border spinner-border-sm text-primary" : "text-success font-weight-bold"}>
-                    {loadingStep > 1 && "✓"}
-                  </span>
-                  <span className={loadingStep === 1 ? "font-weight-bold text-dark" : "text-secondary"}>
-                    Querying Roboflow Cloud Inference Engine...
-                  </span>
-                </div>
-              ) : (
-                <div className="d-flex align-items-center gap-2 text-muted" style={{ color: '#94a3b8' }}>
-                  <span style={{ width: '12px' }}>•</span>
-                  <span>Querying Roboflow Cloud Inference Engine...</span>
-                </div>
-              )}
-
-              {loadingStep >= 2 ? (
-                <div className="d-flex align-items-center gap-2">
-                  <span className={loadingStep === 2 ? "spinner-border spinner-border-sm text-primary" : "text-success font-weight-bold"}>
-                    {loadingStep > 2 && "✓"}
-                  </span>
-                  <span className={loadingStep === 2 ? "font-weight-bold text-dark" : "text-secondary"}>
-                    Applying Solidity boundary shape-smoothing...
-                  </span>
-                </div>
-              ) : (
-                <div className="d-flex align-items-center gap-2 text-muted" style={{ color: '#94a3b8' }}>
-                  <span style={{ width: '12px' }}>•</span>
-                  <span>Applying Solidity boundary shape-smoothing...</span>
-                </div>
-              )}
-
-              {loadingStep >= 3 ? (
-                <div className="d-flex align-items-center gap-2">
-                  <span className="spinner-border spinner-border-sm text-primary"></span>
-                  <span className="font-weight-bold text-dark">
-                    Mapping anatomical regions (Cervical/Incisal)...
-                  </span>
-                </div>
-              ) : (
-                <div className="d-flex align-items-center gap-2 text-muted" style={{ color: '#94a3b8' }}>
-                  <span style={{ width: '12px' }}>•</span>
-                  <span>Mapping anatomical regions (Cervical/Incisal)...</span>
-                </div>
-              )}
+          {/* Stepper Progress */}
+          <div className="d-flex flex-column gap-2.5 text-start bg-light p-3.5 rounded border small">
+            <div className={`d-flex align-items-center gap-2 ${loadingStep >= 1 ? 'text-success font-weight-bold' : 'text-primary font-weight-bold'}`}>
+              {loadingStep >= 1 ? <FaCheckCircle /> : <span className="spinner-border spinner-border-sm" />}
+              <span>1. Normalizing tooth brightness & color channels</span>
             </div>
-          </div>
-
-          <div className="mt-4 text-muted xsmall">
-            Please do not refresh the browser or click away.
+            <div className={`d-flex align-items-center gap-2 ${loadingStep >= 2 ? 'text-success font-weight-bold' : loadingStep === 1 ? 'text-primary font-weight-bold' : 'text-muted opacity-50'}`}>
+              {loadingStep >= 2 ? <FaCheckCircle /> : loadingStep === 1 ? <span className="spinner-border spinner-border-sm" /> : <span>•</span>}
+              <span>2. Segmenting biofilm & disclosed plaque boundaries</span>
+            </div>
+            <div className={`d-flex align-items-center gap-2 ${loadingStep >= 3 ? 'text-success font-weight-bold' : loadingStep === 2 ? 'text-primary font-weight-bold' : 'text-muted opacity-50'}`}>
+              {loadingStep >= 3 ? <FaCheckCircle /> : loadingStep === 2 ? <span className="spinner-border spinner-border-sm" /> : <span>•</span>}
+              <span>3. Calculating tooth surface coverage % & severity metrics</span>
+            </div>
           </div>
         </div>
       </div>
@@ -170,53 +116,53 @@ const UploadImage = () => {
   }
 
   return (
-    <div style={{ maxWidth: '700px', margin: '0 auto' }}>
-      <h3 className="mb-4 font-weight-bold">Upload Dental Plaque Image</h3>
+    <div className="container-fluid p-4 animate-fade-in" style={{ maxWidth: '900px' }}>
+      {/* Page Header */}
+      <PageHeader
+        title="Upload Dental Photo & Run AI Plaque Scan"
+        subtitle="Submit disclosing dye photos to generate automated surface area plaque mappings."
+        icon={FaCamera}
+      />
 
-      <div className="clinic-card">
+      <div className="card shadow-sm border-0 p-4 p-md-5 bg-white text-start" style={{ borderRadius: '16px' }}>
         {error && (
-          <div className="alert alert-danger py-2 small" role="alert">
-            {error}
+          <div className="alert alert-danger py-2 small mb-4 d-flex align-items-center gap-2">
+            <FaExclamationCircle /> <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleUpload}>
-          <div className="mb-3">
-            <label className="form-label small font-weight-bold">Patient</label>
-            <select 
-              className="form-select" 
-              value={selectedPatientId}
-              onChange={(e) => setSelectedPatientId(e.target.value)}
-              required
-              disabled={!!searchParams.get('patientId')}
-            >
-              <option value="">-- Choose Patient --</option>
-              {patients.map(p => (
-                <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>
-              ))}
-            </select>
+          {/* Patient Selector */}
+          <div className="mb-4">
+            <label className="form-label small font-weight-bold">Target Patient Record <span className="text-danger">*</span></label>
+            <PatientSearchInput
+              patients={patients}
+              selectedPatient={selectedPatient}
+              onSelectPatient={(p) => setSelectedPatient(p)}
+              onClear={() => setSelectedPatient(null)}
+            />
           </div>
 
-          {/* Drag & Drop Area */}
+          {/* Photo Dropzone */}
           <div className="mb-4">
-            <label className="form-label small font-weight-bold">Select Dental Photo (Plaque Disclosed)</label>
+            <label className="form-label small font-weight-bold">Clinical Photo (Disclosed Teeth) <span className="text-danger">*</span></label>
             <div 
               className="border rounded p-4 text-center bg-light d-flex flex-column align-items-center justify-content-center"
-              style={{ borderStyle: 'dashed', cursor: 'pointer', minHeight: '220px' }}
+              style={{ borderStyle: 'dashed', cursor: 'pointer', minHeight: '220px', borderColor: '#CBD5E1' }}
               onClick={() => document.getElementById('dentalImageFileInput').click()}
             >
               {previewUrl ? (
                 <img 
                   src={previewUrl} 
-                  alt="Dental Preview" 
-                  className="img-fluid rounded" 
-                  style={{ maxHeight: '180px', objectFit: 'contain' }}
+                  alt="Dental Scan Preview" 
+                  className="img-fluid rounded shadow-sm" 
+                  style={{ maxHeight: '200px', objectFit: 'contain' }}
                 />
               ) : (
                 <>
-                  <FaCloudUploadAlt size={48} className="text-primary mb-2" style={{ color: '#2563EB' }} />
-                  <div className="font-weight-bold small">Click or drag files here to upload</div>
-                  <div className="text-muted xsmall mt-1">Supports PNG, JPG, or JPEG formats. Max 10MB.</div>
+                  <FaCloudUploadAlt size={48} className="text-primary mb-2" />
+                  <div className="font-weight-bold small text-dark">Click or drag dental photo here to upload</div>
+                  <div className="text-muted xsmall mt-1">Supports PNG, JPG, or JPEG formats. High resolution recommended.</div>
                 </>
               )}
             </div>
@@ -229,14 +175,12 @@ const UploadImage = () => {
             />
           </div>
 
-          {/* Preprocessing Options Sliders hidden to match document screenshots */}
-
           <div className="mb-4">
-            <label className="form-label small font-weight-bold">Upload Notes / Remarks</label>
+            <label className="form-label small font-weight-bold">Clinician Notes / Observations</label>
             <textarea 
               className="form-control" 
               rows="3" 
-              placeholder="e.g. Upper arches, disclosing solution applied, post-brushing checkup..."
+              placeholder="e.g. Upper anterior teeth, 2-tone disclosing solution applied, patient reports sensitivity..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
@@ -244,15 +188,9 @@ const UploadImage = () => {
 
           <button 
             type="submit" 
-            className="btn btn-primary-clinic w-100 py-2 d-flex align-items-center justify-content-center gap-2"
-            disabled={uploading}
+            className="btn btn-primary w-100 py-2.5 font-weight-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
           >
-            {uploading ? (
-              <>
-                <div className="spinner-border spinner-border-sm text-white" role="status"></div>
-                Analyzing plaque coverage...
-              </>
-            ) : 'Analyze Dental Image'}
+            <FaMicroscope /> Run AI Plaque Detection & Open Validation Canvas →
           </button>
         </form>
       </div>

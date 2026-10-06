@@ -53,6 +53,16 @@ namespace DentalVision.Application.Services
         {
             var patient = _mapper.Map<Patient>(request);
             patient.PatientCode = $"PAT-{Guid.NewGuid().ToString().Substring(0, 5).ToUpper()}";
+            
+            if (request.IsProfileCompleted.HasValue)
+            {
+                patient.IsProfileCompleted = request.IsProfileCompleted.Value;
+            }
+            else
+            {
+                patient.IsProfileCompleted = patient.DateOfBirth.HasValue && !string.IsNullOrWhiteSpace(patient.Gender) && !string.IsNullOrWhiteSpace(patient.Address);
+            }
+
             await _unitOfWork.Patients.AddAsync(patient);
             await _unitOfWork.CompleteAsync();
             return _mapper.Map<PatientDto>(patient);
@@ -64,6 +74,36 @@ namespace DentalVision.Application.Services
             if (patient == null) return null;
 
             _mapper.Map(request, patient);
+            if (request.IsProfileCompleted.HasValue)
+            {
+                patient.IsProfileCompleted = request.IsProfileCompleted.Value;
+            }
+            else
+            {
+                patient.IsProfileCompleted = patient.DateOfBirth.HasValue && !string.IsNullOrWhiteSpace(patient.Gender) && !string.IsNullOrWhiteSpace(patient.Address);
+            }
+
+            _unitOfWork.Patients.Update(patient);
+            await _unitOfWork.CompleteAsync();
+
+            return _mapper.Map<PatientDto>(patient);
+        }
+
+        public async Task<PatientDto?> CompleteProfileAsync(int id, CompletePatientProfileDto request)
+        {
+            var patient = await _unitOfWork.Patients.GetByIdAsync(id);
+            if (patient == null) return null;
+
+            if (request.DateOfBirth.HasValue) patient.DateOfBirth = request.DateOfBirth.Value;
+            if (!string.IsNullOrWhiteSpace(request.Gender)) patient.Gender = request.Gender;
+            if (!string.IsNullOrWhiteSpace(request.Address)) patient.Address = request.Address;
+            if (!string.IsNullOrWhiteSpace(request.MedicalHistory)) patient.MedicalHistory = request.MedicalHistory;
+            if (!string.IsNullOrWhiteSpace(request.Allergies)) patient.Allergies = request.Allergies;
+            if (!string.IsNullOrWhiteSpace(request.EmergencyContactName)) patient.EmergencyContactName = request.EmergencyContactName;
+            if (!string.IsNullOrWhiteSpace(request.EmergencyContactPhone)) patient.EmergencyContactPhone = request.EmergencyContactPhone;
+            
+            patient.IsProfileCompleted = true;
+
             _unitOfWork.Patients.Update(patient);
             await _unitOfWork.CompleteAsync();
 

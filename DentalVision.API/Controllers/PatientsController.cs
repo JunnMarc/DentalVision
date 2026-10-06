@@ -55,6 +55,18 @@ namespace DentalVision.API.Controllers
             return Ok(patient);
         }
 
+        [HttpPut("{id}/complete-profile")]
+        [Authorize(Roles = "Dentist,Receptionist,Administrator,Patient")]
+        public async Task<IActionResult> CompleteProfile(int id, [FromBody] CompletePatientProfileDto request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var patient = await _patientService.CompleteProfileAsync(id, request);
+            if (patient == null) return NotFound(new { message = "Patient not found" });
+
+            return Ok(patient);
+        }
+
         [HttpGet("my-profile")]
         public async Task<IActionResult> GetMyProfile()
         {

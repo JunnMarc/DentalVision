@@ -35,6 +35,26 @@ namespace DentalVision.API.Controllers
             return Ok(appointment);
         }
 
+        [HttpGet("patient/{patientId}")]
+        public async Task<IActionResult> GetByPatientId(int patientId)
+        {
+            var appointments = await _appointmentService.GetByPatientIdAsync(patientId);
+            return Ok(appointments);
+        }
+
+        [HttpGet("my-appointments")]
+        public async Task<IActionResult> GetMyAppointments()
+        {
+            var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
+                ?? User.FindFirst("email")?.Value;
+            
+            if (string.IsNullOrEmpty(email)) return BadRequest("User email claim not found in token");
+
+            var appointments = await _appointmentService.GetAllAsync(null);
+            var filtered = appointments.Where(a => a.PatientEmail != null && a.PatientEmail.Equals(email, StringComparison.OrdinalIgnoreCase)).ToList();
+            return Ok(filtered);
+        }
+
         [HttpPost]
         [Authorize(Roles = "Receptionist,Administrator,Patient,Dentist")]
         public async Task<IActionResult> Create([FromBody] CreateAppointmentDto request)
@@ -43,6 +63,28 @@ namespace DentalVision.API.Controllers
 
             var appointment = await _appointmentService.CreateAsync(request);
             return CreatedAtAction(nameof(GetById), new { id = appointment.Id }, appointment);
+        }
+
+        [HttpPost("quick-book")]
+        [Authorize(Roles = "Receptionist,Administrator,Patient,Dentist")]
+        public async Task<IActionResult> QuickBook([FromBody] QuickBookAppointmentDto request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var appointment = await _appointmentService.QuickBookAsync(request);
+            return CreatedAtAction(nameof(GetById), new { id = appointment.Id }, appointment);
+        }
+
+        [HttpPut("{id}/intake")]
+        [Authorize(Roles = "Receptionist,Administrator,Dentist")]
+        public async Task<IActionResult> UpdateIntake(int id, [FromBody] UpdateAppointmentIntakeDto request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var appointment = await _appointmentService.UpdateIntakeAsync(id, request);
+            if (appointment == null) return NotFound(new { message = "Appointment not found" });
+
+            return Ok(appointment);
         }
 
         [HttpPut("{id}/status")]

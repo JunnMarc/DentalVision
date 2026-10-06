@@ -28,6 +28,18 @@ namespace DentalVision.Application.Services
             _mapper = mapper;
         }
 
+        public async Task<IEnumerable<ClinicalReportDto>> GetAllReportsAsync()
+        {
+            var reports = _unitOfWork.ClinicalReports.Find(r => true)
+                .Include(r => r.Patient)
+                .Include(r => r.PlaqueAnalysis)
+                .Include(r => r.Dentist)
+                .ThenInclude(d => d.User)
+                .OrderByDescending(r => r.ReportDate)
+                .ToList();
+            return _mapper.Map<IEnumerable<ClinicalReportDto>>(reports);
+        }
+
         public async Task<ClinicalReportDto?> GetReportByIdAsync(int id)
         {
             var report = _unitOfWork.ClinicalReports.Find(r => r.Id == id)
@@ -174,7 +186,7 @@ namespace DentalVision.Application.Services
                                     col.Item().Text("PATIENT DETAILS").Bold().FontSize(9).FontColor(Colors.Grey.Darken1);
                                     col.Item().Text($"Name: {report.Patient.FirstName} {report.Patient.LastName}").Bold().FontSize(11);
                                     col.Item().Text($"Patient ID: #{report.PatientId}");
-                                    col.Item().Text($"DOB: {report.Patient.DateOfBirth.ToShortDateString()}");
+                                    col.Item().Text($"DOB: {report.Patient.DateOfBirth?.ToShortDateString() ?? "N/A"}");
                                 });
 
                                 row.RelativeItem().Column(col =>
