@@ -62,25 +62,24 @@ def analyze_plaque(image_path, brightness=0, contrast=1.0, denoise_radius=3):
     hsv = cv2.cvtColor(processed, cv2.COLOR_BGR2HSV)
 
     # 4. Define Plaque Color Mask Boundaries (Two-tone erythrosine solution)
-    # Pink/Magenta/Red (fresh plaque)
-    # Red/Pink wraps around the 0-180 Hue scale in OpenCV
-    lower_pink1 = np.array([140, 85, 60])
+    # Pink/Magenta/Red (fresh plaque) - Broaden saturation down to 40 to capture lighter disclosed areas
+    lower_pink1 = np.array([140, 40, 50])
     upper_pink1 = np.array([180, 255, 255])
     mask_pink1 = cv2.inRange(hsv, lower_pink1, upper_pink1)
 
-    lower_pink2 = np.array([0, 85, 60])
-    upper_pink2 = np.array([10, 255, 255])
+    lower_pink2 = np.array([0, 40, 50])
+    upper_pink2 = np.array([15, 255, 255])
     mask_pink2 = cv2.inRange(hsv, lower_pink2, upper_pink2)
     mask_pink = cv2.bitwise_or(mask_pink1, mask_pink2)
 
-    # Blue/Purple (mature/thick plaque)
-    lower_blue = np.array([90, 85, 50])
-    upper_blue = np.array([135, 255, 255])
+    # Blue/Purple/Violet (mature/thick acidogenic biofilm - H in 95-155)
+    lower_blue = np.array([95, 40, 45])
+    upper_blue = np.array([155, 255, 255])
     mask_blue = cv2.inRange(hsv, lower_blue, upper_blue)
 
-    # Segment natural gums to prevent segmentation bleeding into gum tissue
-    lower_gum = np.array([0, 30, 30])
-    upper_gum = np.array([20, 135, 255])
+    # Segment natural gums to prevent segmentation bleeding into normal gum tissue
+    lower_gum = np.array([0, 20, 40])
+    upper_gum = np.array([20, 110, 255])
     gum_mask = cv2.inRange(hsv, lower_gum, upper_gum)
 
     # Combine fresh and mature plaque masks
@@ -91,7 +90,7 @@ def analyze_plaque(image_path, brightness=0, contrast=1.0, denoise_radius=3):
     plaque_mask = cv2.morphologyEx(plaque_mask, cv2.MORPH_CLOSE, kernel)
     plaque_mask = cv2.morphologyEx(plaque_mask, cv2.MORPH_OPEN, kernel)
     
-    # FIX: Force subtract natural gum tissue colors from the plaque profiles
+    # Subtract natural gum tissue colors from the plaque profiles
     plaque_mask = cv2.bitwise_and(plaque_mask, cv2.bitwise_not(gum_mask))
 
     # Create a vertical Region of Interest (ROI) mask to exclude lips and border margins
@@ -396,13 +395,10 @@ def analyze_plaque(image_path, brightness=0, contrast=1.0, denoise_radius=3):
                         cervical_boundary = ymax_t - int(tooth_h * 0.33)
                         cervical_mask[min(ymax_t - 1, cervical_boundary):ymax_t, :] = 255
 
-                    # Restrict the tooth mask to ONLY the cervical third
-                    cervical_tooth_mask = cv2.bitwise_and(single_tooth_mask, cervical_mask)
-
-                    # Calculate plaque pixels strictly inside the cervical third (gumline)
-                    tooth_plaque = cv2.bitwise_and(plaque_mask, cervical_tooth_mask)
+                    # Calculate plaque pixels inside this tooth crown
+                    tooth_plaque = cv2.bitwise_and(plaque_mask, single_tooth_mask)
                     
-                    tooth_area = cv2.countNonZero(cervical_tooth_mask)
+                    tooth_area = cv2.countNonZero(single_tooth_mask)
                     plaque_area = cv2.countNonZero(tooth_plaque)
                     
                     total_teeth_pixels += tooth_area

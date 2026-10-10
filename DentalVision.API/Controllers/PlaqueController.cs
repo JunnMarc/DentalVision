@@ -34,7 +34,8 @@ namespace DentalVision.API.Controllers
         }
 
         [HttpPost("upload")]
-        [Authorize(Roles = "Dentist")]
+        [HttpPost("upload-and-analyze")]
+        [Authorize(Roles = "Dentist,Administrator")]
         public async Task<IActionResult> UploadImage(
             [FromForm] IFormFile file, 
             [FromForm] int patientId, 
@@ -137,6 +138,7 @@ namespace DentalVision.API.Controllers
             {
                 imageId = dentalImage.Id,
                 filePath = dentalImage.FilePath,
+                analysisId = analysis.Id,
                 analysis = analysisDto
             });
         }

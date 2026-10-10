@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
 import {
   FaTooth,
@@ -235,6 +235,33 @@ export const ConsultationWorkspace = () => {
       } catch (e) {}
     });
   }, [mappings, activeTab]);
+
+  // Aggregated mappings per tooth for clean clinical overview
+  const aggregatedMappings = useMemo(() => {
+    const map = new Map();
+    mappings.forEach((m, origIdx) => {
+      const num = m.toothNumber || 'Unknown';
+      if (!map.has(num)) {
+        map.set(num, {
+          toothNumber: num,
+          plaqueLevel: m.plaqueLevel || 'Low',
+          regions: new Set([m.gumlineRegion || 'Cervical']),
+          indices: [origIdx]
+        });
+      } else {
+        const entry = map.get(num);
+        entry.indices.push(origIdx);
+        if (m.gumlineRegion) entry.regions.add(m.gumlineRegion);
+        if (m.plaqueLevel === 'High' || (m.plaqueLevel === 'Medium' && entry.plaqueLevel === 'Low')) {
+          entry.plaqueLevel = m.plaqueLevel;
+        }
+      }
+    });
+    return Array.from(map.values()).map(e => ({
+      ...e,
+      regionsStr: Array.from(e.regions).join(', ')
+    }));
+  }, [mappings]);
 
   // Canvas Click to Add / Edit Node
   const handleCanvasClick = (e) => {
@@ -628,13 +655,13 @@ export const ConsultationWorkspace = () => {
                   )}
                 </div>
               ) : (
-                <div className="position-relative overflow-hidden rounded border" style={{ height: '420px', backgroundColor: '#F1F5F9' }}>
+                <div className="position-relative overflow-hidden rounded border shadow-sm" style={{ width: '100%', aspectRatio: '3 / 2', backgroundColor: '#0B0F19' }}>
                   {/* Photo Layer */}
                   <img
                     src={imagePath}
                     alt="Dental Disclosing Clinical Scan"
                     className="position-absolute top-0 start-0 w-100 h-100"
-                    style={{ objectFit: 'cover' }}
+                    style={{ objectFit: 'fill' }}
                   />
                   {/* Interactive Canvas Overlay */}
                   <canvas
@@ -716,14 +743,14 @@ export const ConsultationWorkspace = () => {
                 {coveragePercentage}%
               </div>
               <div className="small text-muted">
-                Status: <strong className="text-dark">{mappings.length > 0 ? `${mappings.length} Plaque Regions Mapped` : 'Pending Scan'}</strong>
+                Status: <strong className="text-dark">{aggregatedMappings.length > 0 ? `${aggregatedMappings.length} Teeth Affected (${mappings.length} Spots)` : 'Pending Scan'}</strong>
               </div>
             </div>
 
             {/* Mappings Table */}
             <div className="card shadow-sm border-0 p-4 bg-white" style={{ borderRadius: '16px' }}>
               <h6 className="font-weight-bold text-dark mb-3">Detected Tooth Regions</h6>
-              {mappings.length === 0 ? (
+              {aggregatedMappings.length === 0 ? (
                 <div className="text-center py-4 bg-light rounded text-muted small">
                   No plaque regions detected yet. Upload a photo to analyze.
                 </div>
@@ -734,12 +761,12 @@ export const ConsultationWorkspace = () => {
                       <tr>
                         <th>Tooth</th>
                         <th>Severity</th>
-                        <th>Region</th>
+                        <th>Region(s)</th>
                         <th className="text-end">Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {mappings.map((m, idx) => (
+                      {aggregatedMappings.map((m, idx) => (
                         <tr key={idx}>
                           <td className="font-weight-bold text-primary">#{m.toothNumber}</td>
                           <td>
@@ -747,12 +774,16 @@ export const ConsultationWorkspace = () => {
                               {m.plaqueLevel}
                             </span>
                           </td>
-                          <td className="small text-muted">{m.gumlineRegion || 'Cervical'}</td>
+                          <td className="small text-muted">{m.regionsStr || 'Cervical'}</td>
                           <td className="text-end">
                             <button
                               type="button"
                               className="btn btn-sm btn-link text-danger p-0"
-                              onClick={() => setMappings(mappings.filter((_, i) => i !== idx))}
+                              title="Remove markers for this tooth"
+                              onClick={() => {
+                                const indicesSet = new Set(m.indices);
+                                setMappings(mappings.filter((_, i) => !indicesSet.has(i)));
+                              }}
                             >
                               <FaTrash size={11} />
                             </button>
