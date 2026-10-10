@@ -167,8 +167,10 @@ export const ConsultationWorkspace = () => {
 
       const data = response.data;
       setAnalysis(data.analysis || { id: data.analysisId });
-      setCoveragePercentage(data.analysis?.coveragePercentage || 14.5);
-      setMappings(data.analysis?.mappings || []);
+      const cov = data.analysis?.coveragePercentage || 14.5;
+      const mapList = data.analysis?.mappings || [];
+      setCoveragePercentage(cov);
+      setMappings(mapList);
 
       if (data.imageId) {
         const imgRes = await api.get(`/plaque/analysis/image/${data.imageId}`, { responseType: 'blob' });
@@ -177,7 +179,25 @@ export const ConsultationWorkspace = () => {
         setImagePath(uploadPreview);
       }
 
-      showNotification("AI Plaque Detection successfully executed! You can now fine-tune markers.");
+      // Automatically suggest dental procedures based on clinical plaque findings
+      const suggested = [];
+      if (cov > 8) suggested.push('prophylaxis');
+      if (mapList.some(m => m.plaqueLevel === 'High' && m.gumlineRegion?.includes('Cervical'))) {
+        suggested.push('deep_scaling');
+      }
+      if (cov > 20) suggested.push('fluoride');
+      if (suggested.length > 0) {
+        setSelectedProcedures(prev => Array.from(new Set([...prev, ...suggested])));
+      }
+
+      if (!clinicalNotes) {
+        setClinicalNotes(`Intraoral disclosing examination reveals ${cov}% plaque biofilm index. Significant subgingival/cervical plaque noted along the gingival margin. Periodontal prophylaxis and subgingival scaling recommended.`);
+      }
+      if (!recommendations) {
+        setRecommendations("1. Twice-daily modified Bass brushing technique targeting the gumline.\n2. Daily interdental flossing or water flosser.\n3. 0.12% Chlorhexidine gluconate oral rinse for 7 days post-cleaning.");
+      }
+
+      showNotification("AI Plaque Detection successfully executed! Findings mapped to Clinical Workspace.");
     } catch (err) {
       console.error("AI Analysis error:", err);
       showNotification(err.response?.data?.message || "AI Analysis failed to process image.", "danger");
@@ -709,7 +729,7 @@ export const ConsultationWorkspace = () => {
                           ))}
                         </select>
                       </div>
-                      <div className="mb-3">
+                      <div className="mb-2">
                         <label className="xsmall text-muted mb-1 d-block">Plaque Level</label>
                         <select
                           className="form-select form-select-sm bg-dark text-white border-secondary"
@@ -719,6 +739,18 @@ export const ConsultationWorkspace = () => {
                           <option value="High">High Severity</option>
                           <option value="Medium">Medium Severity</option>
                           <option value="Low">Low Severity</option>
+                        </select>
+                      </div>
+                      <div className="mb-3">
+                        <label className="xsmall text-muted mb-1 d-block">Anatomical Region</label>
+                        <select
+                          className="form-select form-select-sm bg-dark text-white border-secondary"
+                          value={activeTooltip.gumlineRegion || 'Gumline (Cervical)'}
+                          onChange={(e) => setActiveTooltip({ ...activeTooltip, gumlineRegion: e.target.value })}
+                        >
+                          <option value="Gumline (Cervical)">Gumline (Cervical)</option>
+                          <option value="Interproximal">Interproximal</option>
+                          <option value="Crown Surface">Crown Surface</option>
                         </select>
                       </div>
                       <button
