@@ -139,13 +139,22 @@ export const PatientProfile = () => {
             >
               <FaEdit size={12} /> Edit Profile
             </button>
-            {hasRole(['Dentist', 'Dental Staff']) && (
+            {hasRole(['Dentist', 'Administrator']) && (
               <Link
-                to="/upload-image"
-                state={{ patientId: patient.id }}
+                to={`/consultation?patientId=${patient.id}`}
+                state={{ patientId: patient.id, patientName: `${patient.firstName} ${patient.lastName}` }}
                 className="btn btn-sm btn-primary d-flex align-items-center gap-1.5 px-3 py-1.5 font-weight-bold shadow-sm"
               >
-                <FaCamera size={12} /> Upload Plaque Scan
+                <FaTooth size={12} /> Clinical Workspace
+              </Link>
+            )}
+            {hasRole(['Dentist', 'Dental Staff']) && (
+              <Link
+                to="/plaque/upload"
+                state={{ patientId: patient.id }}
+                className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1.5 px-3 py-1.5 font-weight-bold"
+              >
+                <FaCamera size={12} /> Plaque Scan
               </Link>
             )}
           </div>

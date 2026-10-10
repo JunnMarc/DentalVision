@@ -235,7 +235,7 @@ export const Dashboard = () => {
             <div className="col-md-3">
               <MetricCard
                 title="Pending AI Verifications"
-                value={data?.pendingValidations || 0}
+                value={Array.isArray(data?.pendingValidations) ? data.pendingValidations.length : (data?.pendingValidations || 0)}
                 subtitle="Awaiting clinician sign-off"
                 icon={FaExclamationTriangle}
                 variant="warning"
@@ -244,7 +244,7 @@ export const Dashboard = () => {
             <div className="col-md-3">
               <MetricCard
                 title="Today's Consultations"
-                value={data?.todayAppointmentsCount || 0}
+                value={data?.todaysPatientsCount ?? data?.todayAppointmentsCount ?? 0}
                 subtitle="Scheduled for you today"
                 icon={FaCalendarCheck}
                 variant="primary"
@@ -253,7 +253,7 @@ export const Dashboard = () => {
             <div className="col-md-3">
               <MetricCard
                 title="Completed Exams"
-                value={data?.completedExamsCount || 0}
+                value={Array.isArray(data?.recentReports) ? data.recentReports.length : (data?.completedExamsCount || 0)}
                 subtitle="This month"
                 icon={FaCheckCircle}
                 variant="success"
@@ -262,7 +262,7 @@ export const Dashboard = () => {
             <div className="col-md-3">
               <MetricCard
                 title="Active Patients"
-                value={data?.totalPatients || 0}
+                value={data?.totalPatients ?? (Array.isArray(data?.recentReports) ? data.recentReports.length : 0)}
                 subtitle="Under clinic care"
                 icon={FaUserFriends}
                 variant="info"
@@ -277,7 +277,7 @@ export const Dashboard = () => {
               <RecentAppointmentsList appointments={data?.todayAppointments || []} />
             </div>
             <div className="col-lg-6">
-              <PlaqueActivityFeed analyses={data?.recentAnalyses || []} />
+              <PlaqueActivityFeed analyses={data?.pendingValidations || data?.recentAnalyses || []} />
             </div>
           </div>
         </>

@@ -68,7 +68,7 @@ export const AppointmentCalendar = () => {
   };
 
   const handleNavigateToValidation = (appt) => {
-    navigate('/plaque-validation', {
+    navigate(`/consultation/${appt.id}`, {
       state: {
         appointmentId: appt.id,
         patientId: appt.patientId,

@@ -12,6 +12,7 @@ import AppointmentCalendar from '../pages/AppointmentCalendar';
 import Billing from '../pages/Billing';
 import UploadImage from '../pages/UploadImage';
 import PlaqueValidation from '../pages/PlaqueValidation';
+import ConsultationWorkspace from '../pages/ConsultationWorkspace';
 import ClinicalReports from '../pages/ClinicalReports';
 import Settings from '../pages/Settings';
 import AuditLogs from '../pages/AuditLogs';
@@ -94,10 +95,34 @@ const AppRoutes = () => {
         } 
       />
       <Route 
+        path="/consultation" 
+        element={
+          <PrivateRoute allowedRoles={['Dentist', 'Administrator']}>
+            <ConsultationWorkspace />
+          </PrivateRoute>
+        } 
+      />
+      <Route 
+        path="/consultation/:appointmentId" 
+        element={
+          <PrivateRoute allowedRoles={['Dentist', 'Administrator']}>
+            <ConsultationWorkspace />
+          </PrivateRoute>
+        } 
+      />
+      <Route 
+        path="/plaque-validation" 
+        element={
+          <PrivateRoute allowedRoles={['Dentist', 'Administrator']}>
+            <ConsultationWorkspace />
+          </PrivateRoute>
+        } 
+      />
+      <Route 
         path="/plaque/validate/:analysisId" 
         element={
-          <PrivateRoute allowedRoles={['Dentist']}>
-            <PlaqueValidation />
+          <PrivateRoute allowedRoles={['Dentist', 'Administrator']}>
+            <ConsultationWorkspace />
           </PrivateRoute>
         } 
       />

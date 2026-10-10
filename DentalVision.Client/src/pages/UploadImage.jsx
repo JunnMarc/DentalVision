@@ -65,7 +65,7 @@ export const UploadImage = () => {
       });
 
       clearInterval(interval);
-      navigate('/plaque-validation', {
+      navigate('/consultation', {
         state: {
           analysisId: response.data.analysisId,
           patientId: selectedPatient.id,

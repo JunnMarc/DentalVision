@@ -12,7 +12,8 @@ import {
   FaHistory, 
   FaCog, 
   FaSignOutAlt,
-  FaUser
+  FaUser,
+  FaTooth
 } from 'react-icons/fa';
 
 const AppLayout = ({ children }) => {
@@ -61,10 +62,11 @@ const AppLayout = ({ children }) => {
     : [
         { path: '/my-profile', label: 'My Profile', icon: <FaUser />, roles: ['Patient'] },
         { path: '/dashboard', label: 'Dashboard', icon: <FaThLarge />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
+        { path: '/consultation', label: 'Clinical Workspace', icon: <FaTooth />, roles: ['Dentist'] },
         { path: '/patients', label: 'Patients', icon: <FaUserFriends />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
         { path: '/appointments', label: 'Appointments', icon: <FaCalendarAlt />, roles: ['Administrator', 'Dentist', 'Dental Staff'] },
         { path: '/billing', label: 'Billing & Payments', icon: <FaFileInvoiceDollar />, roles: ['Administrator', 'Dental Staff'] },
-        { path: '/plaque/upload', label: 'Dental Upload', icon: <FaCamera />, roles: ['Dentist'] },
+        { path: '/plaque/upload', label: 'Plaque Scan Upload', icon: <FaCamera />, roles: ['Dentist'] },
         { path: '/reports', label: 'Clinical Reports', icon: <FaFileAlt />, roles: ['Administrator', 'Dentist'] },
         { path: '/users', label: 'Staff Accounts', icon: <FaUserFriends />, roles: ['Administrator'] },
         { path: '/logs', label: 'Audit Logs', icon: <FaHistory />, roles: ['Administrator'] },

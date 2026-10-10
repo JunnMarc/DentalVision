@@ -24,45 +24,53 @@ export const PlaqueActivityFeed = ({ analyses = [], loading = false }) => {
           </div>
         ) : (
           <div className="list-group list-group-flush">
-            {analyses.slice(0, 6).map((item) => (
-              <div
-                key={item.id}
-                className="list-group-item px-0 py-3 border-bottom d-flex justify-content-between align-items-center"
-              >
-                <div className="d-flex align-items-center gap-3">
-                  <div
-                    className="rounded-circle d-flex align-items-center justify-content-center text-teal bg-light"
-                    style={{ width: '38px', height: '38px', color: '#0D9488' }}
-                  >
-                    <FaMicroscope size={15} />
-                  </div>
-                  <div>
-                    <div className="font-weight-bold text-dark small">
-                      {item.patientName || `Scan #${item.id}`}
-                    </div>
-                    <div className="xsmall text-muted">
-                      Coverage: <strong>{item.coveragePercentage?.toFixed(1) || 0}%</strong> | Confidence: {(item.confidenceScore * 100)?.toFixed(0) || 0}%
-                    </div>
-                  </div>
-                </div>
-                <div className="text-end">
-                  {item.isApproved ? (
-                    <span className="badge bg-success-subtle text-success border border-success-subtle" style={{ fontSize: '11px' }}>
-                      <FaCheckCircle className="me-1" size={10} /> Validated
-                    </span>
-                  ) : (
-                    <Link
-                      to="/plaque-validation"
-                      state={{ analysisId: item.id }}
-                      className="btn btn-sm btn-outline-warning text-dark px-2 py-0.5"
-                      style={{ fontSize: '11px', fontWeight: 600 }}
+            {analyses.slice(0, 6).map((item, idx) => {
+              const currentId = item.analysisId || item.id || idx;
+              return (
+                <div
+                  key={currentId}
+                  className="list-group-item px-0 py-3 border-bottom d-flex justify-content-between align-items-center"
+                >
+                  <div className="d-flex align-items-center gap-3">
+                    <div
+                      className="rounded-circle d-flex align-items-center justify-content-center text-teal bg-light"
+                      style={{ width: '38px', height: '38px', color: '#0D9488' }}
                     >
-                      Verify AI
-                    </Link>
-                  )}
+                      <FaMicroscope size={15} />
+                    </div>
+                    <div>
+                      <div className="font-weight-bold text-dark small">
+                        {item.patientName || `Scan #${currentId}`}
+                      </div>
+                      <div className="xsmall text-muted">
+                        Coverage: <strong>{item.coveragePercentage ? Number(item.coveragePercentage).toFixed(1) : 0}%</strong>
+                        {item.confidenceScore ? ` | Confidence: ${(item.confidenceScore * 100).toFixed(0)}%` : ''}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-end">
+                    {item.isApproved ? (
+                      <span className="badge bg-success-subtle text-success border border-success-subtle" style={{ fontSize: '11px' }}>
+                        <FaCheckCircle className="me-1" size={10} /> Validated
+                      </span>
+                    ) : (
+                      <Link
+                        to="/consultation"
+                        state={{
+                          analysisId: currentId,
+                          patientId: item.patientId,
+                          patientName: item.patientName
+                        }}
+                        className="btn btn-sm btn-outline-warning text-dark px-2 py-0.5"
+                        style={{ fontSize: '11px', fontWeight: 600 }}
+                      >
+                        Verify in Workspace →
+                      </Link>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

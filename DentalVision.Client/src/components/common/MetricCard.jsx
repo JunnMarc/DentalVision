@@ -52,7 +52,7 @@ export const MetricCard = ({
           {title}
         </div>
         <h3 className="font-weight-bold text-dark mb-1" style={{ letterSpacing: '-0.02em' }}>
-          {value}
+          {Array.isArray(value) ? value.length : (typeof value === 'object' && value !== null ? (value.length ?? '') : value)}
         </h3>
         {subtitle && (
           <div className="text-muted xsmall mt-1">
